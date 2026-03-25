@@ -1,0 +1,39 @@
+{
+  "name": "opg-age-detector",
+  "version": "1.0.0",
+  "description": "A clinical dental age estimation app built in React Native, faithfully translated from the Figma design.",
+  "main": "App.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codewithvis/OPG-Age-Detector.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/codewithvis/OPG-Age-Detector/issues"
+  },
+  "homepage": "https://github.com/codewithvis/OPG-Age-Detector#readme",
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-navigation/native": "^7.2.0",
+    "@react-navigation/native-stack": "^7.14.7",
+    "@supabase/supabase-js": "^2.100.0",
+    "expo": "^55.0.8",
+    "expo-crypto": "~55.0.10",
+    "expo-file-system": "~55.0.11",
+    "expo-image-picker": "~55.0.13",
+    "expo-network": "^55.0.9",
+    "expo-notifications": "^55.0.13",
+    "expo-print": "~55.0.9",
+    "expo-sharing": "~55.0.14",
+    "react": "^19.2.4",
+    "react-native": "^0.84.1",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0"
+  }
+}

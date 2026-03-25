@@ -9,8 +9,11 @@ import {
   StatusBar,
   Image,
   FlatList,
+  ActivityIndicator
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
+import { supabase } from '../services/supabase';
+import { calculateDentalAge } from '../utils/scoring';
 
 const STAGES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
@@ -27,8 +30,32 @@ const STAGE_DESCRIPTIONS = {
 
 const XRAY_IMG = 'https://www.figma.com/api/mcp/asset/c494860f-8dca-4cf4-bba5-56f6cc881bac';
 
-export default function StageClassificationScreen({ navigation }) {
+export default function StageClassificationScreen({ navigation, route }) {
   const [activeStage, setActiveStage] = useState('E');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      const stages = {
+        '1': activeStage, '2': activeStage, '3': activeStage, 
+        '4': activeStage, '5': activeStage, '6': activeStage, '7': activeStage,
+      };
+      const { maturity_score, dental_age } = calculateDentalAge(stages, 'Female');
+      const analysisData = {
+        patient_id: 1,
+        stages: stages,
+        maturity_score,
+        dental_age,
+      };
+      await supabase.from('analyses').insert(analysisData);
+      navigation?.navigate('Results', { analysisData, imageUri: route.params?.imageUri });
+    } catch (err) {
+      console.warn('Error saving analysis:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -99,10 +126,15 @@ export default function StageClassificationScreen({ navigation }) {
             <TouchableOpacity
               style={styles.confirmBtn}
               activeOpacity={0.85}
-              onPress={() => navigation?.navigate('Results')}
+              onPress={handleSubmit}
+              disabled={saving}
             >
-              <Text style={styles.confirmBtnIcon}>✓</Text>
-              <Text style={styles.confirmBtnText}>Confirm Stage {activeStage}</Text>
+              {saving ? <ActivityIndicator color={colors.white} /> : (
+                <>
+                  <Text style={styles.confirmBtnIcon}>✓</Text>
+                  <Text style={styles.confirmBtnText}>Confirm Stage {activeStage}</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -174,9 +206,10 @@ export default function StageClassificationScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.solidBtn}
-            onPress={() => navigation?.navigate('Results')}
+            onPress={handleSubmit}
+            disabled={saving}
           >
-            <Text style={styles.solidBtnText}>Generate Age Report</Text>
+            {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.solidBtnText}>Generate Age Report</Text>}
           </TouchableOpacity>
         </View>
 
@@ -196,9 +229,10 @@ export default function StageClassificationScreen({ navigation }) {
         </View>
         <TouchableOpacity
           style={styles.floatingBtn}
-          onPress={() => navigation?.navigate('Results')}
+          onPress={handleSubmit}
+          disabled={saving}
         >
-          <Text style={styles.floatingBtnText}>Submit{'\n'}Stage</Text>
+          {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.floatingBtnText}>Submit{'\n'}Stage</Text>}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

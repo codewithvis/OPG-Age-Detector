@@ -16,12 +16,40 @@ const ASSETS = {
   toothIcon: 'https://www.figma.com/api/mcp/asset/49d306fa-08c4-463e-bc96-c5d169afefaa',
 };
 
+import { supabase } from '../services/supabase';
+
 export default function SignUpScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [licenseId, setLicenseId] = useState('');
   const [password, setPassword] = useState('');
   const [tosAccepted, setTosAccepted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSignup = async () => {
+    if (!email || !password || !fullName || !licenseId) {
+      setErrorMsg('Please fill out all fields.');
+      return;
+    }
+    setLoading(true);
+    setErrorMsg('');
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName, license_id: licenseId }
+      }
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setLoading(false);
+    } else {
+      // Create patient profile indirectly or just wait
+      navigation?.replace('Home');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -52,6 +80,7 @@ export default function SignUpScreen({ navigation }) {
 
           {/* Form */}
           <View style={styles.form}>
+            {errorMsg ? <Text style={{color: 'red', marginBottom: 8}}>{errorMsg}</Text> : null}
 
             {/* Full Name */}
             <View style={styles.fieldGroup}>
@@ -137,10 +166,10 @@ export default function SignUpScreen({ navigation }) {
             <TouchableOpacity
               style={[styles.submitButton, !tosAccepted && styles.submitButtonDisabled]}
               activeOpacity={0.85}
-              disabled={!tosAccepted}
-              onPress={() => navigation?.navigate('Home')}
+              disabled={!tosAccepted || loading}
+              onPress={handleSignup}
             >
-              <Text style={styles.submitButtonText}>Sign Up</Text>
+              <Text style={styles.submitButtonText}>{loading ? 'Signing Up...' : 'Sign Up'}</Text>
               <Text style={styles.submitButtonArrow}> →</Text>
             </TouchableOpacity>
 

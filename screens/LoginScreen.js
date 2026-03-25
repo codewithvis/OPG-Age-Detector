@@ -21,11 +21,35 @@ const ASSETS = {
   arrowIcon: 'https://www.figma.com/api/mcp/asset/78c461cf-e3ce-40e2-bf40-3afcccbb51a2',
 };
 
+import { supabase } from '../services/supabase';
+
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setErrorMsg('Please enter both email and password.');
+      return;
+    }
+    setLoading(true);
+    setErrorMsg('');
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
+    
+    if (error) {
+      setErrorMsg(error.message);
+    } else {
+      navigation?.replace('Home');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -60,6 +84,7 @@ export default function LoginScreen({ navigation }) {
 
           {/* Form */}
           <View style={styles.form}>
+            {errorMsg ? <Text style={{color: 'red', marginBottom: 8}}>{errorMsg}</Text> : null}
             {/* Email */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Email Address</Text>
@@ -118,9 +143,10 @@ export default function LoginScreen({ navigation }) {
             <TouchableOpacity
               style={styles.loginButton}
               activeOpacity={0.85}
-              onPress={() => navigation?.navigate('Home')}
+              onPress={handleLogin}
+              disabled={loading}
             >
-              <Text style={styles.loginButtonText}>Login</Text>
+              <Text style={styles.loginButtonText}>{loading ? 'Logging in...' : 'Login'}</Text>
               <Image source={{ uri: ASSETS.arrowIcon }} style={styles.arrowIcon} />
             </TouchableOpacity>
 

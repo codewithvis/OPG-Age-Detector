@@ -24,9 +24,23 @@ import StageClassificationScreen from './screens/StageClassificationScreen';
 import ResultsDashboardScreen from './screens/ResultsDashboardScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
+import { isNetworkConnected } from './services/expo/network';
+import { syncOfflineData } from './services/supabase';
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  React.useEffect(() => {
+    const initializeApp = async () => {
+      const isOnline = await isNetworkConnected();
+      if (isOnline) {
+        console.log("Network online, syncing offline data...");
+        await syncOfflineData();
+      }
+    };
+    initializeApp();
+  }, []);
+
   return (
     <NavigationContainer>
       <Stack.Navigator

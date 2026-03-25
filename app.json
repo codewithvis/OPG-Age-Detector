@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "OPG Age Detector",
+    "slug": "opg-age-detector",
+    "version": "1.0.0",
+    "plugins": [
+      "expo-sharing",
+      "expo-network"
+    ],
+    "android": {
+      "permissions": [
+        "android.permission.INTERNET"
+      ]
+    }
+  }
+}

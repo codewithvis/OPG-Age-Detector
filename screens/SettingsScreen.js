@@ -9,6 +9,7 @@ import {
   StatusBar,
   Image,
   Switch,
+  Linking,
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
 
@@ -173,11 +174,11 @@ export default function SettingsScreen({ navigation }) {
           <Text style={styles.sectionLabel}>Support & Legal</Text>
 
           <View style={styles.sectionCard}>
-            <MenuRow icon="📖" label="User Documentation" onPress={() => {}} />
+            <MenuRow icon="📖" label="User Documentation" onPress={() => { Linking.openURL('https://opg-app.example.com/docs'); }} />
             <View style={styles.menuDivider} />
-            <MenuRow icon="📋" label="Privacy Policy" onPress={() => {}} />
+            <MenuRow icon="📋" label="Privacy Policy" onPress={() => { Linking.openURL('https://opg-app.example.com/privacy'); }} />
             <View style={styles.menuDivider} />
-            <MenuRow icon="⚖️" label="Terms of Service" onPress={() => {}} />
+            <MenuRow icon="⚖️" label="Terms of Service" onPress={() => { Linking.openURL('https://opg-app.example.com/terms'); }} />
           </View>
         </View>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   SafeAreaView,
   StatusBar,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
+import { supabase } from '../services/supabase';
 
 const XRAY_IMG = 'https://www.figma.com/api/mcp/asset/c494860f-8dca-4cf4-bba5-56f6cc881bac';
 const SHARE_ICON = 'https://www.figma.com/api/mcp/asset/61719cfc-29ee-4e38-a422-1c5d6a967389';
@@ -24,7 +26,6 @@ const DETECTED_TEETH = [
   { id: '32', label: 'Lower Left Lateral Incisor (32)', color: '#10b981' },
 ];
 
-// Tooth label overlay positions on the X-ray
 const TOOTH_OVERLAYS = [
   { id: '36', left: '42%', top: '58%' },
   { id: '35', left: '45%', top: '60%' },
@@ -35,9 +36,54 @@ const TOOTH_OVERLAYS = [
   { id: '46', left: '72%', top: '52%' },
 ];
 
-export default function XRayAnalysisScreen({ navigation }) {
+export default function XRayAnalysisScreen({ navigation, route }) {
   const [overlayEnabled, setOverlayEnabled] = useState(true);
   const [selectedTooth, setSelectedTooth] = useState('36');
+  const [uploading, setUploading] = useState(false);
+  const [currentImageUri, setCurrentImageUri] = useState(XRAY_IMG);
+
+  useEffect(() => {
+    if (route.params?.imageUri) {
+      setCurrentImageUri(route.params.imageUri);
+    }
+  }, [route.params?.imageUri]);
+
+  const handleProceed = async () => {
+    if (route.params?.imageUri) {
+      setUploading(true);
+      try {
+        const fileExt = route.params.imageUri.split('.').pop() || 'jpg';
+        const fileName = `${Date.now()}.${fileExt}`;
+
+        // Using fetch to get the blob from uri, works cross platform in RN
+        const response = await fetch(route.params.imageUri);
+        const blob = await response.blob();
+
+        const { data, error } = await supabase.storage
+          .from('radiographs')
+          .upload(fileName, blob, {
+            contentType: `image/${fileExt}`,
+          });
+
+        if (!error) {
+           const { data: publicData } = supabase.storage.from('radiographs').getPublicUrl(fileName);
+           // Assume patient_id=1 for now, in prod fetch from context/state
+           await supabase.from('radiographs').insert({
+             patient_id: 1,
+             image_url: publicData.publicUrl,
+             uploaded_at: new Date().toISOString()
+           });
+        }
+      } catch (err) {
+        console.warn('Upload failed:', err);
+      } finally {
+        setUploading(false);
+        navigation?.navigate('StageClassification', { imageUri: route.params.imageUri });
+      }
+    } else {
+      navigation?.navigate('StageClassification');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -83,7 +129,7 @@ export default function XRayAnalysisScreen({ navigation }) {
 
         {/* ── Radiograph Viewport ── */}
         <View style={styles.viewport}>
-          <Image source={{ uri: XRAY_IMG }} style={styles.xrayImg} />
+          <Image source={{ uri: currentImageUri }} style={styles.xrayImg} />
 
           {/* AI Overlay Layer */}
           {overlayEnabled && (
@@ -184,10 +230,17 @@ export default function XRayAnalysisScreen({ navigation }) {
           <TouchableOpacity
             style={styles.proceedBtn}
             activeOpacity={0.88}
-            onPress={() => navigation?.navigate('StageClassification')}
+            onPress={handleProceed}
+            disabled={uploading}
           >
-            <Text style={styles.proceedBtnText}>Proceed to Stage Classification</Text>
-            <Text style={styles.proceedBtnArrow}>→</Text>
+            {uploading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <>
+                <Text style={styles.proceedBtnText}>Proceed to Stage Classification</Text>
+                <Text style={styles.proceedBtnArrow}>→</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 

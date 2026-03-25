@@ -58,8 +58,24 @@ function PatientCard({ patient, onPress }) {
   );
 }
 
+import { openImagePicker } from '../services/expo/imagePicker';
+import { sendLocalNotification } from '../services/expo/notifications';
+
 export default function HomeScreen({ navigation }) {
   const [activeTab, setActiveTab] = React.useState('dashboard');
+
+  const handleUploadAndAnalyze = async () => {
+    try {
+      const uri = await openImagePicker();
+      if (uri) {
+        // Trigger a background notification to simulate the analysis start
+        sendLocalNotification("Upload Successful", "The radiograph is queued for Demirjian analysis.");
+        navigation?.navigate('XRayAnalysis', { imageUri: uri });
+      }
+    } catch (error) {
+      console.warn('Error picking image:', error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -115,7 +131,7 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
               style={styles.analyzeBtn}
               activeOpacity={0.85}
-              onPress={() => navigation?.navigate('XRayAnalysis')}
+              onPress={handleUploadAndAnalyze}
             >
               <Image source={{ uri: ASSETS.analyzeArrow }} style={styles.analyzeBtnIcon} />
               <Text style={styles.analyzeBtnText}>Analyze X-Ray</Text>
