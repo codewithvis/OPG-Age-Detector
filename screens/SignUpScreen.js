@@ -11,12 +11,13 @@ import {
   Image,
 } from 'react-native';
 import { colors, radius, shadows, spacing } from '../theme';
+import { DEFAULT_PROFILE_PHOTO } from '../constants/constants';
+import Toast from 'react-native-toast-message';
+import { supabase } from '../services/supabase';
 
 const ASSETS = {
   toothIcon: 'https://www.figma.com/api/mcp/asset/49d306fa-08c4-463e-bc96-c5d169afefaa',
 };
-
-import { supabase } from '../services/supabase';
 
 export default function SignUpScreen({ navigation }) {
   const [fullName, setFullName] = useState('');
@@ -27,21 +28,82 @@ export default function SignUpScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const validateData = async () => {
+      const passwordRegex = /^[a-zA-Z0-9!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]{8,}$/;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!fullName.trim() || !email.trim() || !password.trim() || !licenseId.trim()) {
+        Alert.alert("All fields are required.");
+        return false;
+      }
+  
+      if (password.length < 8) {
+        Alert.alert("Password too short", "Password must be at least 8 characters.");
+        return false;
+      }
+  
+      if (!passwordRegex.test(password)) {
+        Alert.alert("Invalid Password", "Password must include letters, numbers, and special characters.");
+        return false;
+      }
+  
+      if (!emailRegex.test(email)) {
+        Alert.alert("Invalid Email", "Please enter a valid email address.");
+        return false;
+      }
+  
+      return true;
+    };
+
+
   const handleSignup = async () => {
-    if (!email || !password || !fullName || !licenseId) {
+    const validatedData = validateData();
+    if (!validateData) {
       setErrorMsg('Please fill out all fields.');
       return;
     }
+
+    if (!tosAccepted){
+      setErrorMsg("Please accept the terms and conditions");
+      return;
+    }
+
     setLoading(true);
     setErrorMsg('');
     const { data, error } = await supabase.auth.signUp({
       email,
-      password,
-      options: {
-        data: { full_name: fullName, license_id: licenseId }
-      }
+      password
     });
 
+    const user = data.user;
+
+    if (user) {
+      const { error: insertError } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          full_name: fullName,
+          dental_license_student_id: licenseId,
+          email_id: email,
+          profile_photo_url: DEFAULT_PROFILE_PHOTO
+        });
+        
+      if (insertError) {
+        Toast.show({
+          type: 'error', // 'success' | 'error' | 'info'
+          text1: 'Account creation unsuccessful',
+          position: 'bottom', // or 'bottom'
+          visibilityTime: 1500
+        });
+      }
+      else {
+        Toast.show({
+          type: 'success', // 'success' | 'error' | 'info'
+          text1: 'Account creation successful',
+          position: 'bottom', // or 'bottom'
+          visibilityTime: 1500
+        });
+      }
+    }
     if (error) {
       setErrorMsg(error.message);
       setLoading(false);
