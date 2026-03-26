@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Image,
-} from 'react-native';
+import {  View,  Text,  TextInput,  TouchableOpacity,  ScrollView,  StyleSheet,
+  SafeAreaView,  StatusBar,  Image,} from 'react-native';
 import { colors, radius, shadows, spacing } from '../theme';
-import Toast from 'react-native-toast-message';
 import { supabase } from '../services/supabase';
 
 // Asset URLs from Figma (valid for 7 days)
@@ -43,7 +33,6 @@ export default function LoginScreen({ navigation }) {
       password,
     });
     setLoading(false);
-    
     if (error) {
       setErrorMsg(error.message);
     } else {
