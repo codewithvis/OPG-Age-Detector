@@ -60,10 +60,15 @@ function PatientCard({ patient, onPress }) {
 
 import { openImagePicker } from '../services/expo/imagePicker';
 import { sendLocalNotification } from '../services/expo/notifications';
+import { useAuth } from '../provider/AuthProvider';
+import { useProfile } from '../api/profile';
 
 export default function HomeScreen({ navigation }) {
   const [activeTab, setActiveTab] = React.useState('dashboard');
 
+  const {session } = useAuth();
+  const {data: profile, error: profileError} = useProfile(session.user.id);
+  
   const handleUploadAndAnalyze = async () => {
     try {
       const uri = await openImagePicker();

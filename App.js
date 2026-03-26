@@ -26,6 +26,8 @@ import SettingsScreen from './screens/SettingsScreen';
 
 import { isNetworkConnected } from './services/expo/network';
 import { syncOfflineData } from './services/supabase';
+import AuthProvider from './provider/AuthProvider';
+import QueryProvider from './provider/QueryProvider';
 
 const Stack = createNativeStackNavigator();
 
@@ -42,7 +44,9 @@ export default function App() {
   }, []);
 
   return (
-    <NavigationContainer>
+    <AuthProvider>
+      <QueryProvider>
+        <NavigationContainer>
       <Stack.Navigator
         initialRouteName="Login"
         screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
@@ -56,5 +60,7 @@ export default function App() {
         <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
+      </QueryProvider>
+    </AuthProvider>
   );
 }
