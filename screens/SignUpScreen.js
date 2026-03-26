@@ -11,12 +11,13 @@ import {
   Image,
 } from 'react-native';
 import { colors, radius, shadows, spacing } from '../theme';
+import { DEFAULT_PROFILE_PHOTO } from '../constants/constants';
+import Toast from 'react-native-toast-message';
+import { supabase } from '../services/supabase';
 
 const ASSETS = {
   toothIcon: 'https://www.figma.com/api/mcp/asset/49d306fa-08c4-463e-bc96-c5d169afefaa',
 };
-
-import { supabase } from '../services/supabase';
 
 export default function SignUpScreen({ navigation }) {
   const [fullName, setFullName] = useState('');

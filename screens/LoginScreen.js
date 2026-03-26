@@ -11,6 +11,8 @@ import {
   Image,
 } from 'react-native';
 import { colors, radius, shadows, spacing } from '../theme';
+import Toast from 'react-native-toast-message';
+import { supabase } from '../services/supabase';
 
 // Asset URLs from Figma (valid for 7 days)
 const ASSETS = {
@@ -20,8 +22,6 @@ const ASSETS = {
   eyeIcon: 'https://www.figma.com/api/mcp/asset/d74e0d06-2e09-4a90-82a4-859ff8b10c62',
   arrowIcon: 'https://www.figma.com/api/mcp/asset/78c461cf-e3ce-40e2-bf40-3afcccbb51a2',
 };
-
-import { supabase } from '../services/supabase';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
