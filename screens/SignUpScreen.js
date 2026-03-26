@@ -81,7 +81,8 @@ export default function SignUpScreen({ navigation }) {
         .insert({
           id: user.id,
           full_name: fullName,
-          license_id: licenseId,
+          dental_license_student_id: licenseId,
+          email_id: email,
           profile_photo_url: DEFAULT_PROFILE_PHOTO
         });
         

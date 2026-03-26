@@ -10,6 +10,13 @@ import {
   Image,
 } from 'react-native';
 import { colors, radius, shadows } from '../theme';
+import { useState } from 'react';
+
+import { openImagePicker } from '../services/expo/imagePicker';
+import { sendLocalNotification } from '../services/expo/notifications';
+import { useAuth } from '../provider/AuthProvider';
+import { useProfile } from '../api/profile';
+import { DEFAULT_PROFILE_PHOTO } from '../constants/constants';
 
 const ASSETS = {
   profilePic: 'https://www.figma.com/api/mcp/asset/c0ea0520-82ae-49f1-b629-baa5bff5e830',
@@ -58,17 +65,15 @@ function PatientCard({ patient, onPress }) {
   );
 }
 
-import { openImagePicker } from '../services/expo/imagePicker';
-import { sendLocalNotification } from '../services/expo/notifications';
-import { useAuth } from '../provider/AuthProvider';
-import { useProfile } from '../api/profile';
-
 export default function HomeScreen({ navigation }) {
-  const [activeTab, setActiveTab] = React.useState('dashboard');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-  const {session } = useAuth();
-  const {data: profile, error: profileError} = useProfile(session.user.id);
-  
+  const {session, loading} = useAuth();
+  const {data: profile, error : profileError} = useProfile(session?.user?.id);
+
+  console.log("the user is here" , profile);
+  console.log("the eror is ", profileError);
+
   const handleUploadAndAnalyze = async () => {
     try {
       const uri = await openImagePicker();
@@ -90,7 +95,7 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
           <View style={styles.profileBorder}>
-            <Image source={{ uri: ASSETS.profilePic }} style={styles.profilePic} />
+            <Image source={{ uri: profile.profile_photo_url || DEFAULT_PROFILE_PHOTO }} style={styles.profilePic} />
           </View>
         </View>
         <TouchableOpacity style={styles.settingsBtn}>
