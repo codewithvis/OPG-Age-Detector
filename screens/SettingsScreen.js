@@ -192,7 +192,7 @@ export default function SettingsScreen({ navigation }) {
             <Text style={styles.logoutIcon}>→</Text>
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
-          <Text style={styles.logoutVersion}>OPG Age Calculator · Clinical Edition</Text>
+          <Text style={styles.logoutVersion}>DentAge · Clinical Edition</Text>
         </View>
 
         <View style={{ height: 40 }} />

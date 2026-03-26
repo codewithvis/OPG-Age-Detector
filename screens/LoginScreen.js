@@ -48,7 +48,7 @@ export default function LoginScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerBrand}>
           <Image source={{ uri: ASSETS.toothIcon }} style={styles.brandIcon} />
-          <Text style={styles.brandName}>OPG Age Calculator</Text>
+          <Text style={styles.brandName}>DentAge</Text>
         </View>
       </View>
 
@@ -63,7 +63,7 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.welcomeSection}>
             <View style={styles.brandRow}>
               <Image source={{ uri: ASSETS.toothIcon }} style={styles.cardBrandIcon} />
-              <Text style={styles.cardBrandName}>OPG Age Calculator</Text>
+              <Text style={styles.cardBrandName}>DentAge</Text>
             </View>
             <Text style={styles.welcomeTitle}>Welcome Back</Text>
             <Text style={styles.welcomeSubtitle}>

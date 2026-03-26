@@ -17,14 +17,23 @@ export default function AuthProvider({children}: PropsWithChildren) {
 
     useEffect(() => {
         const fetchSession = async() => {
-            const {data, error} = await supabase.auth.getSession();
-            setSession(data.session);
-            setLoading(false);
+            try {
+                const {data, error} = await supabase.auth.getSession();
+                if (error) {
+                    console.warn("Session restoration failed:", error.message);
+                    setSession(null);
+                } else {
+                    setSession(data.session);
+                }
+            } catch (err) {
+                console.warn("Error fetching session:", err);
+                setSession(null);
+            } finally {
+                setLoading(false);
+            }
         };
+        
         fetchSession();
-        supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-        });
         
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);

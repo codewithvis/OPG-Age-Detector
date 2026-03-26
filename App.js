@@ -1,5 +1,5 @@
 /**
- * OPG Age Calculator — React Native App
+ * DentAge — React Native App
  *
  * Navigation setup using React Navigation v6.
  *

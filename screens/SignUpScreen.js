@@ -121,7 +121,7 @@ export default function SignUpScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerBrand}>
           <Image source={{ uri: ASSETS.toothIcon }} style={styles.brandIcon} />
-          <Text style={styles.brandName}>OPG Age Calculator</Text>
+          <Text style={styles.brandName}>DentAge</Text>
         </View>
       </View>
 
