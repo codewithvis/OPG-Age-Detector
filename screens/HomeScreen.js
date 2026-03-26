@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
   StatusBar,
   Image,
 } from 'react-native';
@@ -68,8 +69,12 @@ function PatientCard({ patient, onPress }) {
 export default function HomeScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  const {session, loading} = useAuth();
-  const {data: profile, error : profileError} = useProfile(session?.user?.id);
+  const {session, loading: sessionLoading} = useAuth();
+  const {data: profile, error : profileError, loading: profileLoading} = useProfile(session?.user?.id);
+
+  if (profileLoading || sessionLoading){
+    return <ActivityIndicator size="large" />;
+  }
 
   console.log("the user is here" , profile);
 
@@ -114,7 +119,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.heroCard}>
             <Image source={{ uri: ASSETS.heroDecor }} style={styles.heroDecor} />
             <View style={styles.heroContent}>
-              <Text style={styles.heroGreeting}>Morning, Dr. Aris</Text>
+              <Text style={styles.heroGreeting}>Morning, {profile?.full_name}</Text>
               <Text style={styles.heroTitle}>Clinical Precision{'\n'}Tool</Text>
               <View style={styles.heroPills}>
                 <View style={styles.heroPill}>
