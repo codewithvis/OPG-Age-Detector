@@ -67,7 +67,6 @@ function MenuRow({ icon, label, onPress }) {
 }
 
 export default function SettingsScreen({ navigation }) {
-  const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [method, setMethod] = useState('Demirjian');
 
@@ -163,13 +162,6 @@ export default function SettingsScreen({ navigation }) {
           <Text style={styles.sectionLabel}>App Settings</Text>
 
           <View style={styles.sectionCard}>
-            <ToggleRow
-              icon="🌙"
-              title="Dark Mode"
-              value={darkMode}
-              onChange={setDarkMode}
-            />
-            <View style={styles.divider} />
             <ToggleRow
               icon="🔔"
               title="Push Notifications"
