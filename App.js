@@ -28,6 +28,7 @@ import { isNetworkConnected } from './services/expo/network';
 import { syncOfflineData } from './services/supabase';
 import AuthProvider from './provider/AuthProvider';
 import QueryProvider from './provider/QueryProvider';
+import ChangePasswordScreen from './screens/ChangePasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -52,6 +53,7 @@ export default function App() {
             screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
           >
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
             <Stack.Screen name="SignUp" component={SignUpScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="XRayAnalysis" component={XRayAnalysisScreen} />

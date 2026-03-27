@@ -164,6 +164,24 @@ export default function SettingsScreen({ navigation }) {
               onChange={setNotifications}
             />
             <View style={styles.divider} />
+
+            <TouchableOpacity onPress={() => {
+              navigation.navigate('ChangePasswordScreen');
+            }}> 
+              <View style={styles.linkRow}>
+              <View style={styles.toggleLeft}>
+                <View style={[styles.toggleIcon, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.toggleIconText}>🔐</Text>
+                </View>
+                <View style={styles.toggleTexts}>
+                  <Text style={styles.toggleTitle}>Change Password</Text>
+                  <Text style={styles.toggleSub}>Change your password here</Text>
+                </View>
+              </View>
+            </View>
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
             <View style={styles.linkRow}>
               <View style={styles.toggleLeft}>
                 <View style={[styles.toggleIcon, { backgroundColor: '#f0fdf4' }]}>
