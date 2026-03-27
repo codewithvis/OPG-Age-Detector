@@ -195,6 +195,25 @@ export default function SettingsScreen({ navigation }) {
             </TouchableOpacity>
 
             <View style={styles.divider} />
+
+            {/* <TouchableOpacity onPress={() => {
+              navigation.navigate('DeleteAccountScreen');
+            }}> 
+              <View style={styles.linkRow}>
+              <View style={styles.toggleLeft}>
+                <View style={[styles.toggleIcon, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={styles.toggleIconText}>👨🏻‍💼</Text>
+                </View>
+                <View style={styles.toggleTexts}>
+                  <Text style={styles.toggleTitle}>Delete account</Text>
+                  <Text style={styles.toggleSub}>Permanently delete your account and linked data</Text>
+                </View>
+              </View>
+            </View>
+            </TouchableOpacity>
+
+            <View style={styles.divider} /> */}
+
             <View style={styles.linkRow}>
               <View style={styles.toggleLeft}>
                 <View style={[styles.toggleIcon, { backgroundColor: '#f0fdf4' }]}>
