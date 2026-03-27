@@ -18,6 +18,21 @@ import { sendLocalNotification } from '../services/expo/notifications';
 import { useAuth } from '../provider/AuthProvider';
 import { useProfile } from '../api/profile';
 import { DEFAULT_PROFILE_PHOTO } from '../constants/constants';
+import { scale, moderateScale } from '../utils/responsive';
+import { 
+  FONT_SIZES, 
+  CONTAINER_PADDING, 
+  HEADER_HEIGHT, 
+  ICON_SIZES, 
+  BOTTOM_NAV_HEIGHT, 
+  FAB_BOTTOM_MARGIN,
+  spacing,
+  padding,
+  gaps,
+  borderRadius,
+  layouts,
+  BUTTON_HEIGHT,
+} from '../constants/layout';
 
 const ASSETS = {
   profilePic: 'https://www.figma.com/api/mcp/asset/c0ea0520-82ae-49f1-b629-baa5bff5e830',
@@ -34,40 +49,51 @@ const ASSETS = {
   settingsNavIcon: 'https://www.figma.com/api/mcp/asset/d04e1c8c-4588-4c97-8808-53a66b050009',
 };
 
-const patientData = [
+const initialPatientData = [
   { id: 1, name: 'Benjamin\nThorne', caseNum: 'Case #8821-DA', chronoAge: '12.4y', dentalAge: '13.1y' },
   { id: 2, name: 'Elara\nVance', caseNum: 'Case #8819-DA', chronoAge: '8.2y', dentalAge: '8.5y' },
   { id: 3, name: 'Julian\nMars', caseNum: 'Case #8815-DA', chronoAge: '10.6y', dentalAge: '10.4y' },
 ];
 
-function PatientCard({ patient, onPress }) {
+const initialActivityData = [
+  { id: 'activity-1', name: 'Pan-Radiograph A12', time: 'Last analyzed 12m ago', status: 'PROCESSED' },
+];
+
+function PatientCard({ patient, onPress, onDelete }) {
   return (
-    <TouchableOpacity style={styles.patientCard} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.patientLeft}>
-        <View style={styles.patientAvatar}>
-          <Image source={{ uri: ASSETS.patientIcon }} style={styles.patientAvatarIcon} />
+    <View style={styles.patientCardContainer}>
+      <TouchableOpacity style={styles.patientCard} onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.patientLeft}>
+          <View style={styles.patientAvatar}>
+            <Image source={{ uri: ASSETS.patientIcon }} style={styles.patientAvatarIcon} />
+          </View>
+          <View>
+            <Text style={styles.patientName}>{patient.name}</Text>
+            <Text style={styles.patientCase}>{patient.caseNum}</Text>
+          </View>
         </View>
-        <View>
-          <Text style={styles.patientName}>{patient.name}</Text>
-          <Text style={styles.patientCase}>{patient.caseNum}</Text>
+        <View style={styles.patientRight}>
+          <View style={styles.ageColumn}>
+            <Text style={styles.ageLabel}>CHRONOLOGICAL</Text>
+            <Text style={styles.ageValue}>{patient.chronoAge}</Text>
+          </View>
+          <View style={styles.ageColumn}>
+            <Text style={[styles.ageLabel, { color: colors.indigo }]}>DENTAL{'\n'}AGE</Text>
+            <Text style={[styles.ageValue, { color: colors.indigoDark }]}>{patient.dentalAge}</Text>
+          </View>
         </View>
-      </View>
-      <View style={styles.patientRight}>
-        <View style={styles.ageColumn}>
-          <Text style={styles.ageLabel}>CHRONOLOGICAL</Text>
-          <Text style={styles.ageValue}>{patient.chronoAge}</Text>
-        </View>
-        <View style={styles.ageColumn}>
-          <Text style={[styles.ageLabel, { color: colors.indigo }]}>DENTAL{'\n'}AGE</Text>
-          <Text style={[styles.ageValue, { color: colors.indigoDark }]}>{patient.dentalAge}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} activeOpacity={0.7}>
+        <Text style={styles.deleteBtnText}>✕</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 export default function HomeScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [patients, setPatients] = useState(initialPatientData);
+  const [activities, setActivities] = useState(initialActivityData);
 
   const {session, loading: sessionLoading} = useAuth();
   const {data: profile, error : profileError, loading: profileLoading} = useProfile(session?.user?.id);
@@ -77,6 +103,14 @@ export default function HomeScreen({ navigation }) {
   }
 
   console.log("the user is here" , profile);
+
+  const handleDeletePatient = (patientId) => {
+    setPatients(patients.filter(p => p.id !== patientId));
+  };
+
+  const handleDeleteActivity = () => {
+    setActivities([]);
+  };
 
   const handleUploadAndAnalyze = async () => {
     try {
@@ -163,45 +197,60 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <View style={styles.patientList}>
-            {patientData.map((p) => (
-              <PatientCard
-                key={p.id}
-                patient={p}
-                onPress={() => navigation?.navigate('StageClassification')}
-              />
-            ))}
+            {patients.length > 0 ? (
+              patients.map((p) => (
+                <PatientCard
+                  key={p.id}
+                  patient={p}
+                  onPress={() => navigation?.navigate('StageClassification')}
+                  onDelete={() => handleDeletePatient(p.id)}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No assessments yet</Text>
+              </View>
+            )}
           </View>
         </View>
 
         {/* ── Recent Activity ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-          </View>
-          <View style={styles.activityCard}>
-            {/* X-Ray thumbnail */}
-            <View style={styles.xrayWrapper}>
-              <Image source={{ uri: ASSETS.xrayImg }} style={styles.xrayImg} />
-              <View style={styles.xrayInfo}>
-                <View>
-                  <Text style={styles.xrayName}>Pan-Radiograph A12</Text>
-                  <Text style={styles.xrayTime}>Last analyzed 12m ago</Text>
-                </View>
-                <View style={styles.processedBadge}>
-                  <Text style={styles.processedText}>PROCESSED</Text>
+        {activities.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <TouchableOpacity onPress={handleDeleteActivity}>
+                <Text style={styles.deleteActivityBtn}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.activityCard}>
+              {/* X-Ray thumbnail */}
+              <View style={styles.xrayWrapper}>
+                <Image source={{ uri: ASSETS.xrayImg }} style={styles.xrayImg} />
+                <View style={styles.xrayInfo}>
+                  <View>
+                    <Text style={styles.xrayName}>{activities[0].name}</Text>
+                    <Text style={styles.xrayTime}>{activities[0].time}</Text>
+                  </View>
+                  <View style={styles.processedBadge}>
+                    <Text style={styles.processedText}>{activities[0].status}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-            {/* Report line */}
-            <View style={styles.reportRow}>
-              <Image source={{ uri: ASSETS.reportIcon }} style={styles.reportIcon} />
-              <View>
-                <Text style={styles.reportTitle}>Report Generated</Text>
-                <Text style={styles.reportSub}>Sarah Jenkins · 2h ago</Text>
+              {/* Report line */}
+              <View style={styles.reportRow}>
+                <Image source={{ uri: ASSETS.reportIcon }} style={styles.reportIcon} />
+                <View style={styles.reportInfo}>
+                  <Text style={styles.reportTitle}>Report Generated</Text>
+                  <Text style={styles.reportSub}>Sarah Jenkins · 2h ago</Text>
+                </View>
+                <TouchableOpacity onPress={handleDeleteActivity} style={styles.deleteActivityIconBtn}>
+                  <Text style={styles.deleteActivityIcon}>✕</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Bottom padding for FAB */}
         <View style={{ height: 100 }} />
@@ -252,65 +301,65 @@ const styles = StyleSheet.create({
 
   // Top Bar
   topBar: {
-    height: 64,
+    height: HEADER_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.xxl,
     backgroundColor: 'rgba(248,250,252,0.8)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(99,102,241,0.05)',
   },
-  topBarLeft: { flexDirection: 'row', alignItems: 'center' },
+  topBarLeft: { flexDirection: 'row', alignItems: 'center', gap: gaps.md },
   profileBorder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
     borderWidth: 2,
     borderColor: colors.primaryLight,
-    padding: 2,
+    padding: spacing.xs,
     overflow: 'hidden',
   },
-  profilePic: { width: '100%', height: '100%', borderRadius: 18 },
-  settingsBtn: { padding: 8, borderRadius: 20 },
-  settingsIcon: { width: 20, height: 20, resizeMode: 'contain' },
+  profilePic: { width: '100%', height: '100%', borderRadius: scale(18) },
+  settingsBtn: { padding: spacing.sm, borderRadius: spacing.xxl },
+  settingsIcon: { width: ICON_SIZES.md, height: ICON_SIZES.md, resizeMode: 'contain' },
 
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 16 },
+  scrollContent: { paddingHorizontal: CONTAINER_PADDING, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
 
   // Hero
-  heroSection: { gap: 16, marginBottom: 24 },
+  heroSection: { gap: gaps.lg, marginBottom: spacing.xxl },
   heroCard: {
-    borderRadius: 24,
+    borderRadius: borderRadius.card,
     overflow: 'hidden',
-    padding: 32,
+    padding: padding.card,
     backgroundColor: colors.primary,
     ...shadows.hero,
   },
   heroDecor: {
     position: 'absolute',
-    bottom: -16,
-    right: -16,
+    bottom: -spacing.xl,
+    right: -spacing.xl,
     width: 133,
     height: 133,
     opacity: 0.3,
   },
-  heroContent: { gap: 4 },
+  heroContent: { gap: gaps.xs },
   heroGreeting: { fontSize: 14, fontWeight: '500', color: '#e0e0ff', opacity: 0.9 },
   heroTitle: {
-    fontSize: 30,
+    fontSize: FONT_SIZES.huge,
     fontWeight: '700',
     color: colors.white,
     letterSpacing: -0.75,
-    lineHeight: 36,
-    marginBottom: 16,
+    lineHeight: FONT_SIZES.huge * 1.2,
+    marginBottom: gaps.lg,
   },
-  heroPills: { flexDirection: 'row', gap: 16 },
+  heroPills: { flexDirection: 'row', gap: gaps.lg },
   heroPill: {
     backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: padding.input,
+    paddingVertical: padding.input,
   },
   heroPillLabel: {
     fontSize: 10,
@@ -321,53 +370,53 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
   heroPillValue: {
-    fontSize: 24,
+    fontSize: FONT_SIZES.xxl,
     fontWeight: '700',
     color: colors.white,
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
 
   // Quick Scan
   quickScanCard: {
     backgroundColor: colors.bgCard,
-    borderRadius: 24,
+    borderRadius: borderRadius.card,
     borderWidth: 1,
     borderColor: 'rgba(198,197,211,0.1)',
-    padding: 25,
+    padding: padding.card,
     ...shadows.card,
   },
   quickScanTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: gaps.sm,
   },
   quickScanTitle: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
   quickScanIcon: { width: 16, height: 20, resizeMode: 'contain' },
-  quickScanSub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 16 },
+  quickScanSub: { fontSize: FONT_SIZES.base, color: colors.textSecondary, lineHeight: FONT_SIZES.base * 1.4, marginBottom: gaps.lg },
   analyzeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.teal,
-    borderRadius: 12,
-    paddingVertical: 12,
-    gap: 8,
+    borderRadius: borderRadius.button,
+    paddingVertical: padding.input,
+    gap: gaps.sm,
   },
   analyzeBtnIcon: { width: 9, height: 9, resizeMode: 'contain' },
   analyzeBtnText: { fontSize: 16, fontWeight: '600', color: colors.tealDark },
 
   // Section
-  section: { marginBottom: 24 },
+  section: { marginBottom: spacing.xxl },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    marginBottom: 16,
+    paddingHorizontal: spacing.md,
+    marginBottom: gaps.lg,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: FONT_SIZES.xl,
     fontWeight: '700',
     color: colors.textPrimary,
     letterSpacing: -0.5,
@@ -375,23 +424,23 @@ const styles = StyleSheet.create({
   viewAllBtn: { fontSize: 14, fontWeight: '600', color: colors.primary },
 
   // Patient Cards
-  patientList: { gap: 12 },
+  patientList: { gap: gaps.md },
   patientCard: {
     backgroundColor: colors.bgCard,
-    borderRadius: 32,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    borderRadius: borderRadius.card,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     ...shadows.card,
   },
-  patientLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  patientLeft: { flexDirection: 'row', alignItems: 'center', gap: gaps.lg },
   patientAvatar: {
-    width: 36,
-    height: 48,
+    width: scale(36),
+    height: scale(48),
     backgroundColor: colors.primaryExtraLight,
-    borderRadius: 16,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -402,9 +451,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: 22,
   },
-  patientCase: { fontSize: 12, fontWeight: '500', color: colors.textSecondary, marginTop: 4 },
-  patientRight: { flexDirection: 'row', gap: 28 },
-  ageColumn: { alignItems: 'flex-end', gap: 4 },
+  patientCase: { fontSize: FONT_SIZES.sm, fontWeight: '500', color: colors.textSecondary, marginTop: spacing.xs },
+  patientRight: { flexDirection: 'row', gap: spacing.xxxl },
+  ageColumn: { alignItems: 'flex-end', gap: spacing.xs },
   ageLabel: {
     fontSize: 10,
     fontWeight: '400',
@@ -419,15 +468,15 @@ const styles = StyleSheet.create({
   // Activity Card
   activityCard: {
     backgroundColor: '#f1f4f7',
-    borderRadius: 40,
-    padding: 24,
-    gap: 20,
+    borderRadius: borderRadius.card,
+    padding: padding.section,
+    gap: gaps.xl,
   },
-  xrayWrapper: { gap: 12 },
+  xrayWrapper: { gap: gaps.md },
   xrayImg: {
     width: '100%',
-    height: 180,
-    borderRadius: 16,
+    height: scale(180),
+    borderRadius: borderRadius.lg,
     resizeMode: 'cover',
   },
   xrayInfo: {
@@ -453,60 +502,116 @@ const styles = StyleSheet.create({
   reportRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    paddingTop: 16,
+    gap: gaps.lg,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: 'rgba(198,197,211,0.1)',
   },
   reportIcon: { width: 26, height: 26, resizeMode: 'contain' },
+  reportInfo: { flex: 1 },
   reportTitle: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
-  reportSub: { fontSize: 10, fontWeight: '400', color: colors.textSecondary, marginTop: 2 },
+  reportSub: { fontSize: FONT_SIZES.xs, fontWeight: '400', color: colors.textSecondary, marginTop: spacing.xs },
 
   // FAB
   fab: {
     position: 'absolute',
-    bottom: 100,
+    bottom: FAB_BOTTOM_MARGIN,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: gaps.md,
     backgroundColor: colors.primary,
-    borderRadius: 9999,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    borderRadius: borderRadius.avatar,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxl,
     ...shadows.fab,
   },
-  fabIcon: { width: 15, height: 15, resizeMode: 'contain', tintColor: colors.white },
-  fabText: { fontSize: 16, fontWeight: '700', color: colors.white, letterSpacing: -0.4 },
+  fabIcon: { width: ICON_SIZES.sm, height: ICON_SIZES.sm, resizeMode: 'contain', tintColor: colors.white },
+  fabText: { fontSize: FONT_SIZES.base, fontWeight: '700', color: colors.white, letterSpacing: -0.4 },
 
   // Bottom Nav
   bottomNav: {
-    height: 80,
+    height: BOTTOM_NAV_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderTopWidth: 1,
     borderTopColor: '#f1f5f9',
-    paddingBottom: 8,
+    paddingBottom: spacing.sm,
   },
   navTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 16,
-    gap: 4,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    gap: gaps.xs,
   },
   navTabActive: { backgroundColor: colors.primaryExtraLight },
   navIcon: { width: 18, height: 18, resizeMode: 'contain', opacity: 0.5 },
   navIconActive: { opacity: 1 },
   navLabel: {
-    fontSize: 10,
+    fontSize: FONT_SIZES.xs,
     fontWeight: '500',
     color: colors.textMuted,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   navLabelActive: { color: colors.indigoDark },
+
+  // Delete Functionality
+  patientCardContainer: {
+    position: 'relative',
+    marginBottom: 0,
+  },
+  deleteBtn: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
+    backgroundColor: colors.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  deleteBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+    textAlign: 'center',
+  },
+  emptyState: {
+    paddingVertical: padding.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(99,102,241,0.03)',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.1)',
+    borderStyle: 'dashed',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  deleteActivityBtn: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.red,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  deleteActivityIconBtn: {
+    padding: spacing.sm,
+    marginLeft: spacing.sm,
+  },
+  deleteActivityIcon: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.red,
+  },
 });

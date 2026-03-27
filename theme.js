@@ -25,6 +25,8 @@ export const colors = {
   tealDark: '#004077',
   green: '#15803d',
   greenBg: '#dcfce7',
+  red: '#dc2626',
+  redBg: '#fee2e2',
 
   // Borders
   border: 'rgba(198,197,211,0.1)',
