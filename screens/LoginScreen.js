@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {  View,  Text,  TextInput,  TouchableOpacity,  ScrollView,  StyleSheet,
-  SafeAreaView,  StatusBar,  Image,} from 'react-native';
+  StatusBar,  Image,} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius, shadows, spacing } from '../theme';
 import { supabase } from '../services/supabase';
 import { scale, getResponsiveFontSize, moderateScale } from '../utils/responsive';
@@ -124,7 +125,7 @@ export default function LoginScreen({ navigation }) {
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Image source={{ uri: ASSETS.eyeIcon }} style={styles.eyeIcon} />
+                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -310,9 +311,8 @@ const styles = StyleSheet.create({
     padding: layoutSpacing.sm,
   },
   eyeIcon: {
-    width: scale(18),
-    height: scale(13),
-    resizeMode: 'contain',
+    fontSize: 18,
+    color: colors.textSecondary,
   },
   checkboxRow: {
     flexDirection: 'row',

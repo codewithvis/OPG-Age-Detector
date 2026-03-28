@@ -1,21 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Image,
-  FlatList,
   ActivityIndicator,
-  Alert
+  Alert,
+  Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius, shadows } from '../theme';
 import { supabase } from '../services/supabase';
-import { calculateDentalAge } from '../utils/scoring';
+import { useAssessment } from '../provider/AssessmentProvider';
+import { scale } from '../utils/responsive';
+import {
+  FONT_SIZES,
+  CONTAINER_PADDING,
+  spacing,
+  padding,
+  gaps,
+  borderRadius,
+} from '../constants/layout';
 
+const XRAY_IMG = 'https://www.figma.com/api/mcp/asset/c494860f-8dca-4cf4-bba5-56f6cc881bac';
 const STAGES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
 const STAGE_DESCRIPTIONS = {
@@ -29,75 +39,117 @@ const STAGE_DESCRIPTIONS = {
   H: 'Root complete, apex open',
 };
 
-const XRAY_IMG = 'https://www.figma.com/api/mcp/asset/c494860f-8dca-4cf4-bba5-56f6cc881bac';
+const TOOTH_INFO = {
+  '31': { name: 'Lower Left Central Incisor', position: 'Mandibular Left 1' },
+  '32': { name: 'Lower Left Lateral Incisor', position: 'Mandibular Left 2' },
+  '33': { name: 'Lower Left Canine', position: 'Mandibular Left 3' },
+  '34': { name: 'Lower Left First Premolar', position: 'Mandibular Left 4' },
+  '35': { name: 'Lower Left Second Premolar', position: 'Mandibular Left 5' },
+  '36': { name: 'Lower Left First Molar', position: 'Mandibular Left 6' },
+  '37': { name: 'Lower Left Second Molar', position: 'Mandibular Left 7' },
+};
 
-import { scale } from '../utils/responsive';
-import {
-  FONT_SIZES,
-  CONTAINER_PADDING,
-  spacing,
-  padding,
-  gaps,
-  borderRadius,
-} from '../constants/layout';
+const TEETH = ['31', '32', '33', '34', '35', '36', '37'];
 
 export default function StageClassificationScreen({ navigation, route }) {
-  const [activeStage, setActiveStage] = useState('E');
+  const assessment = useAssessment();
+  const [currentToothIndex, setCurrentToothIndex] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async () => {
+  // Guard: Validate that we have required data
+  useEffect(() => {
+    if (!assessment.isOgpUploaded()) {
+      Alert.alert(
+        'Assessment Invalid',
+        'OPG image is required. Please upload an image first.',
+        [{ text: 'Go Back', onPress: () => navigation?.goBack() }]
+      );
+      return;
+    }
+
+    if (!assessment.isGenderSelected()) {
+      Alert.alert(
+        'Gender Required',
+        'Patient gender must be selected before stage classification.',
+        [{ text: 'Go Back', onPress: () => navigation?.goBack() }]
+      );
+      return;
+    }
+  }, []);
+
+  const currentTooth = TEETH[currentToothIndex];
+  const currentStage = assessment.state.toothStages[currentTooth];
+  const allStagesSelected = assessment.areAllStagesSelected();
+
+  const handleStageSelect = (stage) => {
+    assessment.setToothStage(currentTooth, stage);
+  };
+
+  const handleNext = () => {
+    if (currentToothIndex < TEETH.length - 1) {
+      setCurrentToothIndex(currentToothIndex + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentToothIndex > 0) {
+      setCurrentToothIndex(currentToothIndex - 1);
+    }
+  };
+
+  const handleCalculate = async () => {
+    // Final validation
+    const validationError = assessment.validateBeforeAnalysis();
+    if (validationError) {
+      Alert.alert('Validation Error', validationError);
+      return;
+    }
+
     setSaving(true);
+    assessment.setLoading(true);
     try {
-      // Validation 2: Ensure Gender is selected
-      // For testing without XRayScreen passing it, we can fallback, but the rule says "Block calculation"
-      // If we strictly block, we do:
-      const gender = route.params?.gender;
-      if (!gender) {
-        Alert.alert("Validation Error", "Gender must be selected before calculation.");
-        setSaving(false);
-        return;
-      }
-
-      // Step 1: Collect accurate stages for the 7 mandibular teeth
-      const stages = {
-        '31': activeStage, '32': activeStage, '33': activeStage, 
-        '34': activeStage, '35': activeStage, '36': activeStage, '37': activeStage,
-      };
-
-      // Validation 1: Ensure all 7 teeth have stages
-      const missingTeeth = ['31', '32', '33', '34', '35', '36', '37'].filter(t => !stages[t]);
-      if (missingTeeth.length > 0) {
-        Alert.alert("Validation Error", "All 7 mandibular teeth must be staged before proceeding.");
-        setSaving(false);
-        return;
-      }
-
-      // Step 3: Call the strict Supabase Edge Function 'calculateDentalAge'
+      // Call Supabase Edge Function for calculation
       const { data, error } = await supabase.functions.invoke('calculateDentalAge', {
-        body: { 
-          gender: gender, 
-          stages: stages,
-          patient_id: 1 // Default mocked ID for UI
-        }
+        body: {
+          gender: assessment.state.gender,
+          stages: assessment.state.toothStages,
+          patient_id: assessment.state.patientId || 'anonymous',
+        },
       });
 
       if (error || !data) {
-        throw new Error(error?.message || "Function call failed");
+        throw new Error(error?.message || 'Calculation failed');
       }
 
-      // Expected strict response: { patient_id, stages, maturity_score, dental_age }
-      const analysisData = data;
+      // Validate response structure
+      if (!data.dental_age || data.maturity_score === undefined) {
+        throw new Error('Invalid response from calculation service');
+      }
 
-      // Step 4: Database Storage - strict schema matching the rules
-      const { error: dbError } = await supabase.from('analyses').insert(analysisData);
-      if (dbError) throw dbError;
+      assessment.setAnalysisResult(
+        data.maturity_score,
+        data.dental_age,
+        data.patient_id
+      );
+      assessment.markStepComplete('stages');
 
-      navigation?.navigate('Results', { analysisData, imageUri: route.params?.imageUri });
+      // Navigate to results
+      navigation?.navigate('Results', {
+        analysisData: {
+          patient_id: data.patient_id,
+          stages: assessment.state.toothStages,
+          maturity_score: data.maturity_score,
+          dental_age: data.dental_age,
+        },
+        imageUri: assessment.state.ogpImageUri,
+      });
     } catch (err) {
-      console.warn('Error saving analysis:', err);
-      // Optional: Show an alert here on error to block calculation visually 
+      console.error('Error calculating dental age:', err);
+      assessment.setError(err.message || 'Failed to calculate dental age');
+      Alert.alert('Error', err.message || 'Failed to calculate dental age');
     } finally {
       setSaving(false);
+      assessment.setLoading(false);
     }
   };
 
@@ -107,22 +159,18 @@ export default function StageClassificationScreen({ navigation, route }) {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => navigation?.goBack()}
-          >
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <View style={styles.headerTitles}>
-            <Text style={styles.headerTitle}>Stage{'\n'}Classification</Text>
-            <Text style={styles.headerSub}>Tooth 36 · Mandibular Left</Text>
-          </View>
-        </View>
-        <TouchableOpacity style={styles.helpBtn}>
-          <Text style={styles.helpIcon}>✦</Text>
-          <Text style={styles.helpText}>Nolla{'\n'}Scale</Text>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation?.goBack()}
+        >
+          <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Stage Classification</Text>
+          <Text style={styles.headerSub}>
+            {currentToothIndex + 1} of {TEETH.length}
+          </Text>
+        </View>
       </View>
 
       <ScrollView
@@ -130,454 +178,470 @@ export default function StageClassificationScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Diagnostic Focus Section ── */}
-        <View style={styles.diagnosticCard}>
+        {/* Progress Bar */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${((currentToothIndex + 1) / TEETH.length) * 100}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.progressText}>
+            {currentToothIndex + 1} / {TEETH.length}
+          </Text>
+        </View>
+
+        {/* Current Tooth Info */}
+        <View style={styles.toothCard}>
+          <View style={styles.toothLabel}>
+            <Text style={styles.toothNumber}>Tooth {currentTooth}</Text>
+            <Text style={styles.toothName}>
+              {TOOTH_INFO[currentTooth]?.name}
+            </Text>
+          </View>
+
           {/* X-Ray Preview */}
           <View style={styles.xrayPreview}>
             <Image source={{ uri: XRAY_IMG }} style={styles.xrayImg} />
-            <View style={styles.xrayGradient} />
-            <View style={styles.xrayLabel}>
-              <Text style={styles.xrayLabelText}>Tooth 36 · Distal View</Text>
+            <View style={styles.xrayOverlay}>
+              <Text style={styles.xrayText}>{currentTooth}</Text>
             </View>
           </View>
 
-          {/* AI Insights */}
-          <View style={styles.aiInsights}>
-            <View style={styles.aiHeader}>
-              <Text style={styles.aiIcon}>✦</Text>
-              <Text style={styles.aiTitle}>AI Insights</Text>
-            </View>
-
-            <Text style={styles.stageResult}>Stage {activeStage}</Text>
-
-            {/* Confidence Box */}
-            <View style={styles.confidenceBox}>
-              <Text style={styles.confidenceDesc}>
-                Root development shows crown completion with visible root initiation. 
-                Periodontal ligament space is clearly defined. Consistent with late 
-                mixed dentition stage of development based on morphological indicators.
-              </Text>
-              <View style={styles.confidenceRow}>
-                <Text style={styles.confidenceLabel}>AI Confidence</Text>
-                <Text style={styles.confidenceValue}>96%</Text>
-              </View>
-              <View style={styles.progressBg}>
-                <View style={[styles.progressFill, { width: '96%' }]} />
-              </View>
-            </View>
-
-            {/* Confirm Button */}
-            <TouchableOpacity
-              style={styles.confirmBtn}
-              activeOpacity={0.85}
-              onPress={handleSubmit}
-              disabled={saving}
-            >
-              {saving ? <ActivityIndicator color={colors.white} /> : (
-                <>
-                  <Text style={styles.confirmBtnIcon}>✓</Text>
-                  <Text style={styles.confirmBtnText}>Confirm Stage {activeStage}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ── Reference Guide Section ── */}
-        <View style={styles.referenceSection}>
-          <View style={styles.refHeader}>
-            <View>
-              <Text style={styles.refTitle}>Demirjian{'\n'}Stage Guide</Text>
-              <Text style={styles.refSub}>
-                Select a stage to compare with current radiograph
-              </Text>
-            </View>
-            <View style={styles.refNav}>
-              <TouchableOpacity style={styles.refNavBtn}>
-                <Text style={styles.refNavArrow}>‹</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.refNavBtn}>
-                <Text style={styles.refNavArrow}>›</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Horizontal Stage Cards */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.stageCardsRow}
-          >
-            {STAGES.map((stage) => {
-              const isActive = stage === activeStage;
-              return (
+          {/* Stage Selection */}
+          <View style={styles.stageContainer}>
+            <Text style={styles.stageTitle}>Select Demirjian Stage</Text>
+            <View style={styles.stageGrid}>
+              {STAGES.map((stage) => (
                 <TouchableOpacity
                   key={stage}
-                  style={[styles.stageCard, isActive && styles.stageCardActive]}
-                  onPress={() => setActiveStage(stage)}
-                  activeOpacity={0.8}
+                  style={[
+                    styles.stageButton,
+                    currentStage === stage && styles.stageButtonActive,
+                  ]}
+                  onPress={() => handleStageSelect(stage)}
+                  activeOpacity={0.7}
                 >
-                  {isActive && (
-                    <View style={styles.stageActiveBadge}>
-                      <Text style={styles.stageActiveBadgeText}>Current</Text>
-                    </View>
-                  )}
-                  <View style={[styles.stageImageBox, isActive && styles.stageImageBoxActive]}>
-                    <Text style={styles.stageEmoji}>
-                      {stage <= 'C' ? '🦷' : stage <= 'F' ? '🦷' : '🦷'}
-                    </Text>
-                    <Text style={[styles.stageLetter, isActive && styles.stageLetterActive]}>
-                      {stage}
-                    </Text>
-                  </View>
-                  <Text style={[styles.stageCardTitle, isActive && styles.stageCardTitleActive]}>
-                    Stage {stage}
-                  </Text>
-                  <Text style={[styles.stageCardDesc, isActive && styles.stageCardDescActive]}>
-                    {STAGE_DESCRIPTIONS[stage]}
+                  <Text
+                    style={[
+                      styles.stageButtonText,
+                      currentStage === stage && styles.stageButtonTextActive,
+                    ]}
+                  >
+                    {stage}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+              ))}
+            </View>
+
+            {/* Stage Description */}
+            {currentStage && (
+              <View style={styles.descriptionBox}>
+                <Text style={styles.descriptionLabel}>Current Stage</Text>
+                <Text style={styles.descriptionText}>
+                  {STAGE_DESCRIPTIONS[currentStage]}
+                </Text>
+              </View>
+            )}
+
+            {!currentStage && (
+              <View style={styles.descriptionBox}>
+                <Text style={styles.descriptionLabel}>⚠️ Stage Not Selected</Text>
+                <Text style={styles.descriptionText}>
+                  Please select a Demirjian stage for this tooth to proceed
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* ── Secondary Actions ── */}
-        <View style={styles.secondaryActions}>
-          <TouchableOpacity style={styles.outlineBtn}>
-            <Text style={styles.outlineBtnIcon}>📋</Text>
-            <Text style={styles.outlineBtnText}>Add Manual Classification Note</Text>
-          </TouchableOpacity>
+        {/* Tooth List Mini View */}
+        <View style={styles.toothListContainer}>
+          <Text style={styles.toothListTitle}>All Teeth Status</Text>
+          <View style={styles.toothList}>
+            {TEETH.map((tooth, idx) => (
+              <TouchableOpacity
+                key={tooth}
+                style={[
+                  styles.toothListItem,
+                  idx === currentToothIndex && styles.toothListItemActive,
+                  assessment.state.toothStages[tooth] && styles.toothListItemCompleted,
+                ]}
+                onPress={() => setCurrentToothIndex(idx)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.toothListItemText,
+                    idx === currentToothIndex && styles.toothListItemTextActive,
+                  ]}
+                >
+                  {tooth}
+                </Text>
+                {assessment.state.toothStages[tooth] && (
+                  <Text style={styles.toothListItemStage}>
+                    {assessment.state.toothStages[tooth]}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Navigation Buttons */}
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={styles.solidBtn}
-            onPress={handleSubmit}
-            disabled={saving}
+            style={[styles.navButton, currentToothIndex === 0 && styles.navButtonDisabled]}
+            onPress={handlePrevious}
+            disabled={currentToothIndex === 0}
+            activeOpacity={0.7}
           >
-            {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.solidBtnText}>Generate Age Report</Text>}
+            <Text style={styles.navButtonText}>← Previous</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.navButton, currentToothIndex === TEETH.length - 1 && styles.navButtonDisabled]}
+            onPress={handleNext}
+            disabled={currentToothIndex === TEETH.length - 1 || !currentStage}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.navButtonText}>
+              {currentToothIndex === TEETH.length - 1 ? 'Review' : 'Next →'}
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-
-      {/* Floating Action Bar */}
-      <View style={styles.floatingBar}>
-        <View style={styles.floatingBarLeft}>
-          <View style={styles.floatingIcon}>
-            <Text style={styles.floatingIconEmoji}>🦷</Text>
-          </View>
-          <View>
-            <Text style={styles.floatingLabel}>Tooth</Text>
-            <Text style={styles.floatingValue}>36</Text>
-          </View>
-        </View>
+        {/* Calculate Button - Only enabled when all stages selected */}
         <TouchableOpacity
-          style={styles.floatingBtn}
-          onPress={handleSubmit}
-          disabled={saving}
+          style={[
+            styles.calculateButton,
+            !allStagesSelected && styles.calculateButtonDisabled,
+            saving && styles.calculateButtonLoading,
+          ]}
+          onPress={handleCalculate}
+          disabled={!allStagesSelected || saving}
+          activeOpacity={0.85}
         >
-          {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.floatingBtnText}>Submit{'\n'}Stage</Text>}
+          {saving ? (
+            <>
+              <ActivityIndicator color={colors.white} style={{ marginRight: 8 }} />
+              <Text style={styles.calculateButtonText}>Analyzing OPG...</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.calculateButtonText}>
+                {allStagesSelected ? '✓ Calculate Dental Age' : '⚠️ Complete all stages'}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
-      </View>
+
+        {/* Loading Modal Overlay */}
+        <Modal
+          visible={saving}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => {}}
+        >
+          <View style={styles.loadingOverlay}>
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Analyzing OPG...</Text>
+              <Text style={styles.loadingSubtext}>Processing dental age calculation</Text>
+            </View>
+          </View>
+        </Modal>
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bgScreen },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: CONTAINER_PADDING, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
-
-  // Header
-  header: {
-    height: scale(120),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.lg,
+  safe: {
+    flex: 1,
     backgroundColor: colors.bgScreen,
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: gaps.lg },
-  backBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
-    backgroundColor: colors.bgCard,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.card,
-  },
-  backIcon: { fontSize: 18, color: colors.textPrimary },
-  headerTitles: { gap: 4 },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    letterSpacing: -0.75,
-    lineHeight: 30,
-  },
-  headerSub: { fontSize: 14, fontWeight: '400', color: colors.textSecondary },
-  helpBtn: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-    ...shadows.card,
+    paddingHorizontal: padding.screenHorizontal,
+    paddingVertical: spacing.lg,
+    backgroundColor: 'rgba(247,250,253,0.8)',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  helpIcon: { fontSize: 13, color: colors.primary },
-  helpText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    lineHeight: 16,
+  backBtn: {
+    paddingRight: spacing.lg,
   },
-
-  // Diagnostic Card
-  diagnosticCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
-    overflow: 'hidden',
-    marginBottom: spacing.xxxl,
-    ...shadows.card,
+  backIcon: {
+    fontSize: 24,
+    color: colors.textPrimary,
   },
-  xrayPreview: { height: scale(294), position: 'relative' },
-  xrayImg: { width: '100%', height: '100%', resizeMode: 'cover' },
-  xrayGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: scale(80),
-    backgroundColor: 'rgba(0,0,0,0.3)',
+  headerContent: {
+    flex: 1,
   },
-  xrayLabel: {
-    position: 'absolute',
-    bottom: spacing.lg,
-    left: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: borderRadius.button,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  xrayLabelText: { fontSize: FONT_SIZES.xs, fontWeight: '500', color: colors.white },
-  aiInsights: { padding: padding.section, gap: gaps.lg },
-  aiHeader: { flexDirection: 'row', alignItems: 'center', gap: gaps.md },
-  aiIcon: { fontSize: scale(18), color: colors.primary },
-  aiTitle: { fontSize: FONT_SIZES.lg, fontWeight: '600', color: colors.textSecondary },
-  stageResult: {
-    fontSize: scale(36),
+  headerTitle: {
+    fontSize: FONT_SIZES.lg,
     fontWeight: '700',
     color: colors.textPrimary,
-    letterSpacing: -1,
   },
-  confidenceBox: {
-    backgroundColor: '#f8fafc',
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    gap: gaps.lg,
-  },
-  confidenceDesc: {
+  headerSub: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '400',
     color: colors.textSecondary,
-    lineHeight: scale(20),
+    marginTop: spacing.xs,
   },
-  confidenceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  scroll: {
+    flex: 1,
   },
-  confidenceLabel: { fontSize: FONT_SIZES.sm, fontWeight: '500', color: colors.textSecondary },
-  confidenceValue: { fontSize: scale(16), fontWeight: '700', color: colors.primary },
-  progressBg: {
-    height: spacing.xs,
-    backgroundColor: colors.bgInput,
-    borderRadius: spacing.xs,
+  scrollContent: {
+    paddingHorizontal: CONTAINER_PADDING,
+    paddingVertical: spacing.lg,
+  },
+  progressContainer: {
+    marginBottom: spacing.xl,
+  },
+  progressTrack: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
     overflow: 'hidden',
+    marginBottom: spacing.sm,
   },
   progressFill: {
     height: '100%',
-    borderRadius: spacing.xs,
     backgroundColor: colors.primary,
+    borderRadius: 2,
   },
-  confirmBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.lg,
-    gap: gaps.sm,
-    ...shadows.button,
+  progressText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
-  confirmBtnIcon: { fontSize: scale(16), color: colors.white },
-  confirmBtnText: { fontSize: FONT_SIZES.lg, fontWeight: '700', color: colors.white },
-
-  // Reference Section
-  referenceSection: { marginBottom: spacing.xxl },
-  refHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: gaps.lg,
+  toothCard: {
+    backgroundColor: colors.bgCard,
+    borderRadius: borderRadius.card,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    ...shadows.card,
   },
-  refTitle: {
-    fontSize: FONT_SIZES.xxl,
+  toothLabel: {
+    marginBottom: spacing.lg,
+  },
+  toothNumber: {
+    fontSize: FONT_SIZES.xl,
     fontWeight: '700',
-    color: colors.textPrimary,
-    lineHeight: scale(26),
-    letterSpacing: -0.5,
+    color: colors.primary,
+    marginBottom: spacing.xs,
   },
-  refSub: {
+  toothName: {
     fontSize: FONT_SIZES.sm,
     fontWeight: '400',
     color: colors.textSecondary,
-    marginTop: spacing.xs,
-    lineHeight: scale(18),
   },
-  refNav: { flexDirection: 'row', gap: gaps.sm },
-  refNavBtn: {
-    width: spacing.xl,
-    height: spacing.xl,
-    borderRadius: borderRadius.button,
-    backgroundColor: colors.bgCard,
+  xrayPreview: {
+    width: '100%',
+    height: 200,
+    backgroundColor: colors.bgInput,
+    borderRadius: borderRadius.input,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+    position: 'relative',
+  },
+  xrayImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  xrayOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  xrayText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  stageContainer: {
+    marginTop: spacing.lg,
+  },
+  stageTitle: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  stageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  stageButton: {
+    width: '23%',
+    paddingVertical: spacing.md,
+    backgroundColor: colors.bgInput,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1.5,
+    borderColor: colors.border,
     alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.card,
   },
-  refNavArrow: { fontSize: scale(16), color: colors.textPrimary, fontWeight: '600' },
-
-  stageCardsRow: { paddingRight: spacing.lg, gap: gaps.lg },
-  stageCard: {
-    width: scale(200),
+  stageButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  stageButtonText: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  stageButtonTextActive: {
+    color: colors.white,
+  },
+  descriptionBox: {
+    backgroundColor: colors.bgInput,
+    borderRadius: borderRadius.sm,
+    padding: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  descriptionLabel: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  descriptionText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '400',
+    color: colors.textPrimary,
+    lineHeight: FONT_SIZES.sm * 1.5,
+  },
+  toothListContainer: {
     backgroundColor: colors.bgCard,
     borderRadius: borderRadius.card,
     padding: spacing.lg,
-    position: 'relative',
+    marginBottom: spacing.lg,
     ...shadows.card,
   },
-  stageCardActive: {
-    backgroundColor: colors.primaryExtraLight,
+  toothListTitle: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  toothList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  toothListItem: {
+    width: '22%',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.bgInput,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  toothListItemActive: {
     borderWidth: 2,
     borderColor: colors.primary,
   },
-  stageActiveBadge: {
-    position: 'absolute',
-    top: -spacing.md,
-    alignSelf: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.button,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+  toothListItemCompleted: {
+    backgroundColor: colors.primaryExtraLight,
   },
-  stageActiveBadgeText: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '700',
-    color: colors.white,
-  },
-  stageImageBox: {
-    width: scale(168),
-    height: scale(168),
-    backgroundColor: '#f8fafc',
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: gaps.md,
-  },
-  stageImageBoxActive: { backgroundColor: colors.white },
-  stageEmoji: { fontSize: scale(48) },
-  stageLetter: {
-    position: 'absolute',
-    bottom: spacing.xs,
-    right: spacing.xs,
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '700',
-    color: colors.textMuted,
-    backgroundColor: colors.bgInput,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.button,
-  },
-  stageLetterActive: { backgroundColor: colors.primaryExtraLight, color: colors.primary },
-  stageCardTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  stageCardTitleActive: { color: colors.primary },
-  stageCardDesc: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '400',
+  toothListItemText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
     color: colors.textSecondary,
-    lineHeight: scale(17),
+  },
+  toothListItemTextActive: {
+    color: colors.primary,
+  },
+  toothListItemStage: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '700',
+    color: colors.primary,
     marginTop: spacing.xs,
   },
-  stageCardDescActive: { color: colors.textSecondary },
-
-  // Secondary Actions
-  secondaryActions: { gap: gaps.lg, marginBottom: gaps.lg },
-  outlineBtn: {
+  buttonContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong,
-    borderRadius: borderRadius.lg,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  navButton: {
+    flex: 1,
     paddingVertical: spacing.lg,
-    gap: gaps.sm,
-  },
-  outlineBtnIcon: { fontSize: scale(16) },
-  outlineBtnText: { fontSize: FONT_SIZES.lg, fontWeight: '500', color: colors.textSecondary },
-  solidBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    ...shadows.button,
-  },
-  solidBtnText: { fontSize: FONT_SIZES.lg, fontWeight: '700', color: colors.white },
-
-  // Floating Bar
-  floatingBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
-    marginHorizontal: spacing.xxl,
-    marginBottom: spacing.md,
-    padding: spacing.lg,
-    ...shadows.hero,
-  },
-  floatingBarLeft: { flexDirection: 'row', alignItems: 'center', gap: gaps.md },
-  floatingIcon: {
-    width: spacing.xl,
-    height: spacing.xl,
-    backgroundColor: colors.primaryExtraLight,
+    backgroundColor: colors.bgInput,
     borderRadius: borderRadius.button,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  floatingIconEmoji: { fontSize: scale(20) },
-  floatingLabel: { fontSize: FONT_SIZES.xs, fontWeight: '400', color: colors.textSecondary },
-  floatingValue: { fontSize: scale(22), fontWeight: '700', color: colors.textPrimary },
-  floatingBtn: {
+  navButtonDisabled: {
+    opacity: 0.5,
+  },
+  navButtonText: {
+    fontSize: FONT_SIZES.base,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  calculateButton: {
+    paddingVertical: spacing.lg,
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
+    borderRadius: borderRadius.button,
     alignItems: 'center',
     ...shadows.button,
   },
-  floatingBtnText: {
-    fontSize: FONT_SIZES.lg,
+  calculateButtonDisabled: {
+    backgroundColor: colors.textMuted,
+  },
+  calculateButtonText: {
+    fontSize: FONT_SIZES.base,
     fontWeight: '700',
     color: colors.white,
+  },
+  calculateButtonLoading: {
+    opacity: 0.8,
+  },
+  loadingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingBox: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.container,
+    padding: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 260,
+    ...shadows.lg,
+  },
+  loadingText: {
+    fontSize: FONT_SIZES.h3,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: spacing.md,
     textAlign: 'center',
-    lineHeight: scale(20),
+  },
+  loadingSubtext: {
+    fontSize: FONT_SIZES.body,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
 });

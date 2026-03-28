@@ -21,6 +21,8 @@ export default function AuthProvider({children}: PropsWithChildren) {
                 const {data, error} = await supabase.auth.getSession();
                 if (error) {
                     console.warn("Session restoration failed:", error.message);
+                    // Clear invalid session to prevent refresh token errors
+                    await supabase.auth.signOut().catch(() => {});
                     setSession(null);
                 } else {
                     setSession(data.session);
@@ -35,12 +37,18 @@ export default function AuthProvider({children}: PropsWithChildren) {
         
         fetchSession();
         
-        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log('Auth state changed:', event);
             setSession(session);
+            
+            // Handle refresh token errors
+            if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+                setSession(null);
+            }
         });
 
         return () => {
-            authListener.subscription.unsubscribe();
+            authListener?.subscription?.unsubscribe?.();
         };
 
     }, []);

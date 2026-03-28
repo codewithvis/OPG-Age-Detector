@@ -16,6 +16,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Linking, Button } from 'react-native';
+import { supabase } from './services/supabase';
 
 const openWebsite = async () => {
   const url = 'https://reactnative.dev';
@@ -44,6 +45,7 @@ import { isNetworkConnected } from './services/expo/network';
 import { syncOfflineData } from './services/supabase';
 import AuthProvider from './provider/AuthProvider';
 import QueryProvider from './provider/QueryProvider';
+import { AssessmentProvider } from './provider/AssessmentProvider';
 import ChangePasswordScreen from './screens/ChangePasswordScreen';
 import DeleteAccountScreen from './screens/DeleteAccountScreen';
 
@@ -87,11 +89,19 @@ export default function App() {
       const access_token = params.access_token;
       const refresh_token = params.refresh_token;
 
+      // Only set session if both tokens are present and valid
       if (access_token && refresh_token) {
-        await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
+        try {
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (error) {
+            console.warn('Failed to set session from deep link:', error.message);
+          }
+        } catch (err) {
+          console.warn('Error handling deep link session:', err);
+        }
       }
     };
 
@@ -106,26 +116,47 @@ export default function App() {
     };
   }, []);
 
+  // Monitor auth state changes and refresh token errors
+  React.useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed successfully');
+        } else if (event === 'USER_UPDATED') {
+          console.log('User updated');
+        }
+      }
+    );
+
+    return () => {
+      authListener?.subscription?.unsubscribe?.();
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <QueryProvider>
-        <NavigationContainer linking={linking}>
-          <Stack.Navigator
-            initialRouteName="Login"
-            screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
-          >
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
-            <Stack.Screen name="DeleteAccountScreen" component={DeleteAccountScreen} />
-            <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} />
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="XRayAnalysis" component={XRayAnalysisScreen} />
-            <Stack.Screen name="StageClassification" component={StageClassificationScreen} />
-            <Stack.Screen name="Results" component={ResultsDashboardScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <AssessmentProvider>
+          <NavigationContainer linking={linking}>
+            <Stack.Navigator
+              initialRouteName="Login"
+              screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
+            >
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="ChangePasswordScreen" component={ChangePasswordScreen} />
+              <Stack.Screen name="DeleteAccountScreen" component={DeleteAccountScreen} />
+              <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
+              <Stack.Screen name="SignUp" component={SignUpScreen} />
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="XRayAnalysis" component={XRayAnalysisScreen} />
+              <Stack.Screen name="StageClassification" component={StageClassificationScreen} />
+              <Stack.Screen name="Results" component={ResultsDashboardScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </AssessmentProvider>
       </QueryProvider>
     </AuthProvider>
   );

@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius, shadows, spacing } from '../theme';
 import { DEFAULT_PROFILE_PHOTO } from '../constants/constants';
 import Toast from 'react-native-toast-message';
@@ -28,6 +28,7 @@ import {
 
 const ASSETS = {
   toothIcon: 'https://www.figma.com/api/mcp/asset/49d306fa-08c4-463e-bc96-c5d169afefaa',
+  eyeIcon: 'https://www.figma.com/api/mcp/asset/d74e0d06-2e09-4a90-82a4-859ff8b10c62',
 };
 
 export default function SignUpScreen({ navigation }) {
@@ -35,6 +36,7 @@ export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [licenseId, setLicenseId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -210,13 +212,19 @@ export default function SignUpScreen({ navigation }) {
               <View style={styles.inputWrapper}>
                 <Text style={styles.inputEmoji}>🔒</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { paddingRight: 48 }]}
                   placeholder="••••••••••••"
                   placeholderTextColor={colors.textPlaceholder}
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                 />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -374,6 +382,15 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: colors.textPrimary,
     padding: 0,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: layoutSpacing.lg,
+    padding: layoutSpacing.sm,
+  },
+  eyeIcon: {
+    fontSize: 18,
+    color: colors.textSecondary,
   },
   checkboxRow: {
     flexDirection: 'row',

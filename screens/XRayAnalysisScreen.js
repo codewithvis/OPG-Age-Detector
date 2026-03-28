@@ -5,14 +5,15 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Image,
   ActivityIndicator,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius, shadows } from '../theme';
 import { supabase } from '../services/supabase';
+import { useAssessment } from '../provider/AssessmentProvider';
 
 const XRAY_IMG = 'https://www.figma.com/api/mcp/asset/c494860f-8dca-4cf4-bba5-56f6cc881bac';
 const SHARE_ICON = 'https://www.figma.com/api/mcp/asset/61719cfc-29ee-4e38-a422-1c5d6a967389';
@@ -50,33 +51,49 @@ const TOOTH_OVERLAYS = [
 ];
 
 export default function XRayAnalysisScreen({ navigation, route }) {
+  const assessment = useAssessment();
   const [overlayEnabled, setOverlayEnabled] = useState(true);
   const [selectedTooth, setSelectedTooth] = useState('36');
   const [uploading, setUploading] = useState(false);
-  const [currentImageUri, setCurrentImageUri] = useState(XRAY_IMG);
-  const [gender, setGender] = useState(null); // Gender state
+  const [currentImageUri, setCurrentImageUri] = useState(null);
 
   useEffect(() => {
+    // If image passed via route, use it
     if (route.params?.imageUri) {
       setCurrentImageUri(route.params.imageUri);
+      assessment.setOgpImage(route.params.imageUri);
     }
   }, [route.params?.imageUri]);
 
   const handleProceed = async () => {
-    // Validation: Block calculation if gender is not selected
-    if (!gender) {
-      Alert.alert("Validation Error", "Gender must be selected before proceeding.");
+    // CRITICAL VALIDATION: Ensure OPG image is selected
+    if (!currentImageUri) {
+      Alert.alert(
+        'OPG Image Required',
+        'You must upload an OPG image before proceeding to stage classification.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
-    if (route.params?.imageUri) {
-      setUploading(true);
-      try {
-        const fileExt = route.params.imageUri.split('.').pop() || 'jpg';
+    // CRITICAL VALIDATION: Ensure gender is selected
+    if (!assessment.isGenderSelected()) {
+      Alert.alert(
+        'Gender Required',
+        'Please select patient gender before proceeding.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Upload image to Supabase storage
+      if (currentImageUri && !currentImageUri.startsWith('http')) {
+        const fileExt = currentImageUri.split('.').pop() || 'jpg';
         const fileName = `${Date.now()}.${fileExt}`;
 
-        // Using fetch to get the blob from uri, works cross platform in RN
-        const response = await fetch(route.params.imageUri);
+        const response = await fetch(currentImageUri);
         const blob = await response.blob();
 
         const { data, error } = await supabase.storage
@@ -86,22 +103,31 @@ export default function XRayAnalysisScreen({ navigation, route }) {
           });
 
         if (!error) {
-           const { data: publicData } = supabase.storage.from('radiographs').getPublicUrl(fileName);
-           // Assume patient_id=1 for now, in prod fetch from context/state
-           await supabase.from('radiographs').insert({
-             patient_id: 1,
-             image_url: publicData.publicUrl,
-             uploaded_at: new Date().toISOString()
-           });
+          const { data: publicData } = supabase.storage
+            .from('radiographs')
+            .getPublicUrl(fileName);
+          
+          await supabase.from('radiographs').insert({
+            patient_id: assessment.state.patientId || 'anonymous',
+            image_url: publicData.publicUrl,
+            uploaded_at: new Date().toISOString(),
+          });
         }
-      } catch (err) {
-        console.warn('Upload failed:', err);
-      } finally {
-        setUploading(false);
-        navigation?.navigate('StageClassification', { imageUri: route.params.imageUri, gender });
       }
-    } else {
-      navigation?.navigate('StageClassification', { gender });
+
+      // Store image in assessment context
+      assessment.setOgpImage(currentImageUri);
+      
+      // Navigate to stage classification with guardians already in place
+      navigation?.navigate('StageClassification', {
+        imageUri: currentImageUri,
+        gender: assessment.state.gender,
+      });
+    } catch (err) {
+      console.warn('Upload failed:', err);
+      Alert.alert('Upload Error', 'Failed to upload the OPG image. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -255,16 +281,16 @@ export default function XRayAnalysisScreen({ navigation, route }) {
           </View>
           <View style={{ flexDirection: 'row', gap: gaps.md, marginTop: spacing.sm }}>
             <TouchableOpacity 
-              style={[styles.toothTag, gender === 'Male' && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-              onPress={() => setGender('Male')}
+              style={[styles.toothTag, assessment.state.gender === 'Male' && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+              onPress={() => assessment.setGender('Male')}
             >
-              <Text style={[styles.toothTagText, gender === 'Male' && { color: colors.white }]}>Male</Text>
+              <Text style={[styles.toothTagText, assessment.state.gender === 'Male' && { color: colors.white }]}>Male</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.toothTag, gender === 'Female' && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-              onPress={() => setGender('Female')}
+              style={[styles.toothTag, assessment.state.gender === 'Female' && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+              onPress={() => assessment.setGender('Female')}
             >
-              <Text style={[styles.toothTagText, gender === 'Female' && { color: colors.white }]}>Female</Text>
+              <Text style={[styles.toothTagText, assessment.state.gender === 'Female' && { color: colors.white }]}>Female</Text>
             </TouchableOpacity>
           </View>
         </View>

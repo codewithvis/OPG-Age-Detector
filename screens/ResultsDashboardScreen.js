@@ -5,15 +5,16 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   Image,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { generatePDFReport } from '../services/expo/fileHandler';
 import { shareFile } from '../services/expo/sharing';
 import { sendLocalNotification } from '../services/expo/notifications';
 import { colors, radius, shadows } from '../theme';
+import { useAssessment } from '../provider/AssessmentProvider';
 import { scale } from '../utils/responsive';
 import {
   FONT_SIZES,
@@ -80,9 +81,62 @@ const cpStyles = StyleSheet.create({
 });
 
 export default function ResultsDashboardScreen({ navigation, route }) {
-  const analysisData = route.params?.analysisData;
-  const dentalAge = analysisData?.dental_age || 13.6;
-  const chronoAge = 12.4; // mocked chronological age
+  const assessment = useAssessment();
+
+  // CRITICAL WORKFLOW GUARD: Prevent access without complete assessment
+  React.useEffect(() => {
+    // ❌ DO NOT ALLOW ACCESS IF:
+    // 1. No OPG image uploaded
+    // 2. Gender not selected
+    // 3. All 7 teeth stages not selected
+    // 4. No analysis results available
+
+    if (!assessment.isOgpUploaded()) {
+      Alert.alert(
+        'Assessment Incomplete',
+        'OPG image is required. Please start a new assessment.',
+        [{ text: 'Start Assessment', onPress: () => navigation?.navigate('Home') }]
+      );
+      return;
+    }
+
+    if (!assessment.isGenderSelected()) {
+      Alert.alert(
+        'Gender Not Selected',
+        'Patient gender must be selected before results can be displayed.',
+        [{ text: 'Go Back', onPress: () => navigation?.goBack() }]
+      );
+      return;
+    }
+
+    if (!assessment.areAllStagesSelected()) {
+      Alert.alert(
+        'Stages Incomplete',
+        'All 7 teeth must have Demirjian stages assigned.',
+        [{ text: 'Go Back', onPress: () => navigation?.goBack() }]
+      );
+      return;
+    }
+
+    if (!assessment.state.maturityScore || !assessment.state.dentalAge) {
+      Alert.alert(
+        'No Analysis Data',
+        'Assessment data is missing. Please complete the full workflow.',
+        [{ text: 'New Assessment', onPress: () => navigation?.navigate('Home') }]
+      );
+      return;
+    }
+  }, []);
+
+  const analysisData = route.params?.analysisData || {
+    patient_id: assessment.state.patientId,
+    maturity_score: assessment.state.maturityScore,
+    dental_age: assessment.state.dentalAge,
+    stages: assessment.state.toothStages,
+  };
+
+  const dentalAge = analysisData?.dental_age || assessment.state.dentalAge || 0;
+  const chronoAge = 12.4; // mocked chronological age for now
   const delta = parseFloat((dentalAge - chronoAge).toFixed(1));
 
   const handleShare = async () => {
@@ -91,7 +145,7 @@ export default function ResultsDashboardScreen({ navigation, route }) {
         <html>
           <body style="font-family: Arial; padding: 40px;">
             <h1>Dental Age Report</h1>
-            <p><strong>Patient ID:</strong> ${analysisData?.patient_id || 'Unknown'}</p>
+            <p><strong>Patient ID:</strong> ${analysisData?.patient_id || 'Anonymous'}</p>
             <p><strong>Chronological Age:</strong> ${chronoAge} years</p>
             <p><strong>Estimated Dental Age:</strong> ${dentalAge} years</p>
             <p><strong>Delta (Difference):</strong> ${delta > 0 ? '+' : ''}${delta} years</p>
