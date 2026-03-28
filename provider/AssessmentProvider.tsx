@@ -117,21 +117,21 @@ export default function AssessmentProvider({ children }: PropsWithChildren) {
     return requiredTeeth.every(tooth => !!state.toothStages[tooth]);
   };
   
-  const validateBeforeAnalysis = () => {
-    if (!state.ogpImageUri) {
-      return 'OPG image is required';
-    }
-    
-    if (!state.gender) {
-      return 'Patient gender must be selected';
-    }
-    
-    if (!state.areAllStagesSelected()) {
-      return 'All 7 teeth must have Demirjian stages assigned';
-    }
-    
-    return null;
-  };
+    const validateBeforeAnalysis = () => {
+        if (!state.ogpImageUri) {
+            return 'OPG image is required';
+        }
+        
+        if (!state.gender) {
+            return 'Patient gender must be selected';
+        }
+        
+        if (!areAllStagesSelected()) {
+            return 'All 7 teeth must have Demirjian stages assigned';
+        }
+        
+        return null;
+    };
 
   const value: AssessmentContextType = {
     state,
