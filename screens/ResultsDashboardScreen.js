@@ -8,12 +8,13 @@ import {
   StatusBar,
   Image,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { generatePDFReport } from '../services/expo/fileHandler';
 import { shareFile } from '../services/expo/sharing';
 import { sendLocalNotification } from '../services/expo/notifications';
-import { colors, radius, shadows } from '../theme';
+import { colors, radius, shadows, fonts } from '../theme';
 import { useAssessment } from '../provider/AssessmentProvider';
 import { scale } from '../utils/responsive';
 import {
@@ -26,8 +27,8 @@ import {
   borderRadius,
 } from '../constants/layout';
 
-const PROFILE_IMG = 'https://www.figma.com/api/mcp/asset/c0ea0520-82ae-49f1-b629-baa5bff5e830';
-const SHARE_ICON = 'https://www.figma.com/api/mcp/asset/61719cfc-29ee-4e38-a422-1c5d6a967389';
+const PROFILE_IMG = require('../assets/images/default_profile_photo.jpg');
+const SHARE_ICON = require('../assets/icons/share-icon.png');
 
 function CircularProgress({ percentage, label, value }) {
   const radius_val = 50;
@@ -128,6 +129,7 @@ export default function ResultsDashboardScreen({ navigation, route }) {
     }
   }, []);
 
+  // Use data from route params if available, otherwise fall back to assessment state
   const analysisData = route.params?.analysisData || {
     patient_id: assessment.state.patientId,
     maturity_score: assessment.state.maturityScore,
@@ -136,7 +138,8 @@ export default function ResultsDashboardScreen({ navigation, route }) {
   };
 
   const dentalAge = analysisData?.dental_age || assessment.state.dentalAge || 0;
-  const chronoAge = 12.4; // mocked chronological age for now
+  // Use a reasonable default chronological age or get from patient data if available
+  const chronoAge = 12.4; // This would ideally come from patient profile data
   const delta = parseFloat((dentalAge - chronoAge).toFixed(1));
 
   const handleShare = async () => {
@@ -172,18 +175,21 @@ export default function ResultsDashboardScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bgScreen} />
 
-      {/* Top App Bar */}
-      <View style={styles.topBar}>
-        <View style={styles.topLeft}>
-          <View style={styles.profileBorder}>
-            <Image source={{ uri: PROFILE_IMG }} style={styles.profilePic} />
-          </View>
-          <Text style={styles.topTitle}>Dental Age Report</Text>
-        </View>
-        <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-          <Image source={{ uri: SHARE_ICON }} style={styles.shareIcon} />
-        </TouchableOpacity>
-      </View>
+       {/* Top App Bar */}
+       <View style={styles.topBar}>
+         <View style={styles.topLeft}>
+           <View style={styles.profileBorder}>
+             <Image source={{ uri: PROFILE_IMG }} style={styles.profilePic} />
+           </View>
+           <View style={styles.profileInfo}>
+             <Text style={styles.profileName}>{analysisData?.patient_id ? 'Patient ' + analysisData.patient_id : 'Anonymous'}</Text>
+             <Text style={styles.profileSubtitle}>Dental Age Assessment</Text>
+           </View>
+         </View>
+         <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+           <Image source={{ uri: SHARE_ICON }} style={styles.shareIcon} />
+         </TouchableOpacity>
+       </View>
 
       <ScrollView
         style={styles.scroll}
@@ -196,9 +202,12 @@ export default function ResultsDashboardScreen({ navigation, route }) {
         <View style={styles.maturityCard}>
           <Text style={styles.maturityLabel}>Skeletal Maturity Score</Text>
           <View style={styles.maturityCircle}>
-            <CircularProgress percentage={75} value="E" />
+            <CircularProgress 
+              percentage={Math.min(Math.round((analysisData?.maturity_score || 0)), 100)} 
+              value={String.fromCharCode(64 + Math.ceil((analysisData?.maturity_score || 0) / 12.5)) || 'E'}
+            />
           </View>
-          <Text style={styles.maturitySub}>Demirjian Stage · Moderate Maturity</Text>
+          <Text style={styles.maturitySub}>Demirjian Stage · ${(analysisData?.maturity_score || 0) > 0 ? 'Calculated Maturity' : 'Awaiting Analysis'}</Text>
         </View>
 
         {/* Age Comparison Card */}

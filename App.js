@@ -12,11 +12,12 @@
  *   npm install @react-navigation/native @react-navigation/native-stack
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Linking, Button } from 'react-native';
 import { supabase } from './services/supabase';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 
 const openWebsite = async () => {
   const url = 'https://reactnative.dev';
@@ -59,11 +60,29 @@ const linking = {
       Login: 'login',
       SignUp: 'signup',
       Home: 'home',
+      ChangePasswordScreen: 'change-password',
+      DeleteAccountScreen: 'delete-account',
+      XRayAnalysis: 'xray-analysis',
+      StageClassification: 'stage-classification',
+      Results: 'results',
+      Settings: 'settings',
     },
   },
 };
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+
+  if (!fontsLoaded) {
+    return null; // or return a loading screen
+  }
+
   React.useEffect(() => {
     const initializeApp = async () => {
       const isOnline = await isNetworkConnected();

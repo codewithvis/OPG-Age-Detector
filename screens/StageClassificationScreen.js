@@ -24,8 +24,9 @@ import {
   gaps,
   borderRadius,
 } from '../constants/layout';
+import { calculateTotalMaturityScore, maturityScoreToDentalAge } from '../constants/demirjianTable';
 
-const XRAY_IMG = 'https://www.figma.com/api/mcp/asset/c494860f-8dca-4cf4-bba5-56f6cc881bac';
+const XRAY_IMG = require('../assets/images/opg-sample.jpg');
 const STAGES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
 const STAGE_DESCRIPTIONS = {
@@ -55,6 +56,7 @@ export default function StageClassificationScreen({ navigation, route }) {
   const assessment = useAssessment();
   const [currentToothIndex, setCurrentToothIndex] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Guard: Validate that we have required data
   useEffect(() => {
@@ -97,61 +99,73 @@ export default function StageClassificationScreen({ navigation, route }) {
     }
   };
 
-  const handleCalculate = async () => {
-    // Final validation
-    const validationError = assessment.validateBeforeAnalysis();
-    if (validationError) {
-      Alert.alert('Validation Error', validationError);
-      return;
-    }
-
-    setSaving(true);
-    assessment.setLoading(true);
-    try {
-      // Call Supabase Edge Function for calculation
-      const { data, error } = await supabase.functions.invoke('calculateDentalAge', {
-        body: {
-          gender: assessment.state.gender,
-          stages: assessment.state.toothStages,
-          patient_id: assessment.state.patientId || 'anonymous',
-        },
-      });
-
-      if (error || !data) {
-        throw new Error(error?.message || 'Calculation failed');
-      }
-
-      // Validate response structure
-      if (!data.dental_age || data.maturity_score === undefined) {
-        throw new Error('Invalid response from calculation service');
-      }
-
-      assessment.setAnalysisResult(
-        data.maturity_score,
-        data.dental_age,
-        data.patient_id
-      );
-      assessment.markStepComplete('stages');
-
-      // Navigate to results
-      navigation?.navigate('Results', {
-        analysisData: {
-          patient_id: data.patient_id,
-          stages: assessment.state.toothStages,
-          maturity_score: data.maturity_score,
-          dental_age: data.dental_age,
-        },
-        imageUri: assessment.state.ogpImageUri,
-      });
-    } catch (err) {
-      console.error('Error calculating dental age:', err);
-      assessment.setError(err.message || 'Failed to calculate dental age');
-      Alert.alert('Error', err.message || 'Failed to calculate dental age');
-    } finally {
-      setSaving(false);
-      assessment.setLoading(false);
-    }
+  const handleConfirmCalculation = () => {
+    setShowConfirmation(true);
   };
+
+  const handleCancelConfirmation = () => {
+    setShowConfirmation(false);
+  };
+
+  const handleConfirmAndCalculate = () => {
+    setShowConfirmation(false);
+    handleCalculate();
+  };
+
+    const handleCalculate = async () => {
+      // Final validation
+      const validationError = assessment.validateBeforeAnalysis();
+      if (validationError) {
+        Alert.alert('Validation Error', validationError);
+        return;
+      }
+
+      setSaving(true);
+      assessment.setLoading(true);
+      try {
+        // Calculate maturity score using Demirjian tables
+        const maturityScore = calculateTotalMaturityScore(
+          assessment.state.toothStages,
+          assessment.state.gender
+        );
+        
+        // Convert maturity score to dental age
+        const dentalAge = maturityScoreToDentalAge(
+          maturityScore,
+          assessment.state.gender
+        );
+
+        // Validate results
+        if (maturityScore === null || dentalAge === null) {
+          throw new Error('Invalid calculation result');
+        }
+
+        assessment.setAnalysisResult(
+          maturityScore,
+          dentalAge,
+          assessment.state.patientId || 'anonymous'
+        );
+        assessment.markStepComplete('stages');
+
+        // Navigate to results
+        navigation?.navigate('Results', {
+          analysisData: {
+            patient_id: assessment.state.patientId || 'anonymous',
+            stages: assessment.state.toothStages,
+            maturity_score: maturityScore,
+            dental_age: dentalAge,
+          },
+          imageUri: assessment.state.ogpImageUri,
+        });
+      } catch (err) {
+        console.error('Error calculating dental age:', err);
+        assessment.setError(err.message || 'Failed to calculate dental age');
+        Alert.alert('Error', err.message || 'Failed to calculate dental age');
+      } finally {
+        setSaving(false);
+        assessment.setLoading(false);
+      }
+    };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -173,189 +187,232 @@ export default function StageClassificationScreen({ navigation, route }) {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${((currentToothIndex + 1) / TEETH.length) * 100}%` },
-              ]}
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {currentToothIndex + 1} / {TEETH.length}
-          </Text>
-        </View>
+       <ScrollView
+         style={styles.scroll}
+         contentContainerStyle={styles.scrollContent}
+         showsVerticalScrollIndicator={false}
+       >
+         {/* Progress Bar */}
+         <View style={styles.progressContainer}>
+           <View style={styles.progressTrack}>
+             <View
+               style={[
+                 styles.progressFill,
+                 { width: `${((currentToothIndex + 1) / TEETH.length) * 100}%` },
+               ]}
+             />
+           </View>
+           <Text style={styles.progressText}>
+             {currentToothIndex + 1} / {TEETH.length}
+           </Text>
+         </View>
 
-        {/* Current Tooth Info */}
-        <View style={styles.toothCard}>
-          <View style={styles.toothLabel}>
-            <Text style={styles.toothNumber}>Tooth {currentTooth}</Text>
-            <Text style={styles.toothName}>
-              {TOOTH_INFO[currentTooth]?.name}
-            </Text>
-          </View>
+         {/* Current Tooth Info */}
+         <View style={styles.toothCard}>
+           <View style={styles.toothHeader}>
+             <View style={styles.toothInfo}>
+               <Text style={styles.toothNumber}>Tooth {currentTooth}</Text>
+               <Text style={styles.toothName}>
+                 {TOOTH_INFO[currentTooth]?.name}
+               </Text>
+             </View>
+             <View style={styles.toothPosition}>
+               <Text style={styles.toothPositionText}>
+                 {TOOTH_INFO[currentTooth]?.position}
+               </Text>
+             </View>
+           </View>
 
-          {/* X-Ray Preview */}
-          <View style={styles.xrayPreview}>
-            <Image source={{ uri: XRAY_IMG }} style={styles.xrayImg} />
-            <View style={styles.xrayOverlay}>
-              <Text style={styles.xrayText}>{currentTooth}</Text>
-            </View>
-          </View>
+           {/* X-Ray Preview */}
+           <View style={styles.xrayPreview}>
+             <Image source={{ uri: XRAY_IMG }} style={styles.xrayImg} />
+             <View style={styles.xrayOverlay}>
+               <Text style={styles.xrayText}>{currentTooth}</Text>
+             </View>
+           </View>
 
-          {/* Stage Selection */}
-          <View style={styles.stageContainer}>
-            <Text style={styles.stageTitle}>Select Demirjian Stage</Text>
-            <View style={styles.stageGrid}>
-              {STAGES.map((stage) => (
-                <TouchableOpacity
-                  key={stage}
-                  style={[
-                    styles.stageButton,
-                    currentStage === stage && styles.stageButtonActive,
-                  ]}
-                  onPress={() => handleStageSelect(stage)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.stageButtonText,
-                      currentStage === stage && styles.stageButtonTextActive,
-                    ]}
-                  >
-                    {stage}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+           {/* Stage Selection */}
+           <View style={styles.stageContainer}>
+             <Text style={styles.stageTitle}>Select Development Stage</Text>
+             <View style={styles.stageGrid}>
+               {STAGES.map((stage) => (
+                 <TouchableOpacity
+                   key={stage}
+                   style={[
+                     styles.stageButton,
+                     currentStage === stage && styles.stageButtonActive,
+                   ]}
+                   onPress={() => handleStageSelect(stage)}
+                 >
+                   <Text style={styles.stageButtonText}>
+                     {stage}
+                   </Text>
+                 </TouchableOpacity>
+               ))}
+             </View>
 
-            {/* Stage Description */}
-            {currentStage && (
-              <View style={styles.descriptionBox}>
-                <Text style={styles.descriptionLabel}>Current Stage</Text>
-                <Text style={styles.descriptionText}>
-                  {STAGE_DESCRIPTIONS[currentStage]}
-                </Text>
-              </View>
-            )}
+             {/* Stage Description */}
+             {currentStage && (
+               <View style={styles.descriptionBox}>
+                 <Text style={styles.descriptionLabel}>Development Stage</Text>
+                 <Text style={styles.descriptionText}>
+                   {STAGE_DESCRIPTIONS[currentStage]}
+                 </Text>
+               </View>
+             )}
 
-            {!currentStage && (
-              <View style={styles.descriptionBox}>
-                <Text style={styles.descriptionLabel}>⚠️ Stage Not Selected</Text>
-                <Text style={styles.descriptionText}>
-                  Please select a Demirjian stage for this tooth to proceed
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
+             {!currentStage && (
+               <View style={styles.descriptionBox}>
+                 <Text style={styles.descriptionLabel}>⚠️ Stage Not Selected</Text>
+                 <Text style={styles.descriptionText}>
+                   Please select a developmental stage for this tooth to proceed
+                 </Text>
+               </View>
+             )}
+           </View>
+         </View>
 
-        {/* Tooth List Mini View */}
-        <View style={styles.toothListContainer}>
-          <Text style={styles.toothListTitle}>All Teeth Status</Text>
-          <View style={styles.toothList}>
-            {TEETH.map((tooth, idx) => (
-              <TouchableOpacity
-                key={tooth}
-                style={[
-                  styles.toothListItem,
-                  idx === currentToothIndex && styles.toothListItemActive,
-                  assessment.state.toothStages[tooth] && styles.toothListItemCompleted,
-                ]}
-                onPress={() => setCurrentToothIndex(idx)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.toothListItemText,
-                    idx === currentToothIndex && styles.toothListItemTextActive,
-                  ]}
-                >
-                  {tooth}
-                </Text>
-                {assessment.state.toothStages[tooth] && (
-                  <Text style={styles.toothListItemStage}>
-                    {assessment.state.toothStages[tooth]}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+         {/* Tooth List Mini View */}
+         <View style={styles.toothListContainer}>
+           <Text style={styles.toothListTitle}>Teeth Progress</Text>
+           <View style={styles.toothList}>
+             {TEETH.map((tooth, idx) => (
+               <TouchableOpacity
+                 key={tooth}
+                 style={[
+                   styles.toothListItem,
+                   idx === currentToothIndex && styles.toothListItemActive,
+                   assessment.state.toothStages[tooth] && styles.toothListItemCompleted,
+                 ]}
+                 onPress={() => setCurrentToothIndex(idx)}
+               >
+                 <View style={styles.toothListItemContent}>
+                   <Text style={styles.toothListItemNumber}>{tooth}</Text>
+                   {assessment.state.toothStages[tooth] && (
+                     <Text style={styles.toothListItemStage}>
+                       {assessment.state.toothStages[tooth]}
+                     </Text>
+                   )}
+                 </View>
+               </TouchableOpacity>
+             ))}
+           </View>
+         </View>
 
-        {/* Navigation Buttons */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.navButton, currentToothIndex === 0 && styles.navButtonDisabled]}
-            onPress={handlePrevious}
-            disabled={currentToothIndex === 0}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.navButtonText}>← Previous</Text>
-          </TouchableOpacity>
+         {/* Navigation Buttons */}
+         <View style={styles.buttonContainer}>
+           <TouchableOpacity
+             style={[
+               styles.navButton,
+               currentToothIndex === 0 && styles.navButtonDisabled,
+             ]}
+             onPress={handlePrevious}
+             disabled={currentToothIndex === 0}
+           >
+             <Text style={styles.navButtonText}>Previous</Text>
+           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.navButton, currentToothIndex === TEETH.length - 1 && styles.navButtonDisabled]}
-            onPress={handleNext}
-            disabled={currentToothIndex === TEETH.length - 1 || !currentStage}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.navButtonText}>
-              {currentToothIndex === TEETH.length - 1 ? 'Review' : 'Next →'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+           <TouchableOpacity
+             style={[
+               styles.navButton,
+               currentToothIndex === TEETH.length - 1 && styles.navButtonDisabled,
+             ]}
+             onPress={handleNext}
+             disabled={currentToothIndex === TEETH.length - 1 || !currentStage}
+           >
+             <Text style={styles.navButtonText}>
+               {currentToothIndex === TEETH.length - 1 ? 'Complete' : 'Next'}
+             </Text>
+           </TouchableOpacity>
+         </View>
 
-        {/* Calculate Button - Only enabled when all stages selected */}
-        <TouchableOpacity
-          style={[
-            styles.calculateButton,
-            !allStagesSelected && styles.calculateButtonDisabled,
-            saving && styles.calculateButtonLoading,
-          ]}
-          onPress={handleCalculate}
-          disabled={!allStagesSelected || saving}
-          activeOpacity={0.85}
-        >
-          {saving ? (
-            <>
-              <ActivityIndicator color={colors.white} style={{ marginRight: 8 }} />
-              <Text style={styles.calculateButtonText}>Analyzing OPG...</Text>
-            </>
-          ) : (
-            <>
-              <Text style={styles.calculateButtonText}>
-                {allStagesSelected ? '✓ Calculate Dental Age' : '⚠️ Complete all stages'}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
+         {/* Calculate Button - Only enabled when all stages selected */}
+         <TouchableOpacity
+           style={[
+             styles.calculateButton,
+             !allStagesSelected && styles.calculateButtonDisabled,
+             saving && styles.calculateButtonLoading,
+           ]}
+           onPress={handleConfirmCalculation}
+           disabled={!allStagesSelected || saving}
+           activeOpacity={0.9}
+         >
+           {!saving ? (
+             <>
+               {allStagesSelected ? (
+                 <View style={styles.calculateButtonContent}>
+                   <Text style={styles.calculateButtonText}>Calculate Dental Age</Text>
+                   <Text style={styles.calculateButtonSubtext}>
+                     Based on {TEETH.length} teeth assessments
+                   </Text>
+                 </View>
+               ) : (
+                 <View style={styles.calculateButtonContent}>
+                   <Text style={styles.calculateButtonText}>Complete All Stages</Text>
+                   <Text style={styles.calculateButtonSubtext}>
+                     {assessment.state.toothStages
+                       ? Object.values(assessment.state.toothStages).filter(s => s !== null).length
+                       : 0}/{TEETH.length} stages completed
+                   </Text>
+                 </View>
+               )}
+             </>
+           ) : (
+             <View style={styles.calculateButtonContent}>
+               <ActivityIndicator size={20} color={colors.white} />
+               <Text style={styles.calculateButtonText}>Calculating...</Text>
+             </View>
+           )}
+         </TouchableOpacity>
 
-        {/* Loading Modal Overlay */}
-        <Modal
-          visible={saving}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => {}}
-        >
-          <View style={styles.loadingOverlay}>
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Analyzing OPG...</Text>
-              <Text style={styles.loadingSubtext}>Processing dental age calculation</Text>
-            </View>
-          </View>
-        </Modal>
+         {/* Loading Modal Overlay */}
+         <Modal
+           visible={saving}
+           transparent={true}
+           animationType="fade"
+           onRequestClose={() => {}}
+         >
+           <View style={styles.loadingOverlay}>
+             <View style={styles.loadingBox}>
+               <ActivityIndicator size="large" color={colors.primary} />
+               <Text style={styles.loadingText}>Analyzing OPG...</Text>
+               <Text style={styles.loadingSubtext}>Processing dental age calculation</Text>
+             </View>
+           </View>
+         </Modal>
 
-        <View style={{ height: 20 }} />
-      </ScrollView>
+         {/* Confirmation Modal */}
+         <Modal
+           visible={showConfirmation}
+           transparent={true}
+           animationType="fade"
+         >
+           <View style={styles.confirmationOverlay}>
+             <View style={styles.confirmationBox}>
+               <Text style={styles.confirmationTitle}>Confirm Calculation</Text>
+               <Text style={styles.confirmationMessage}>
+                 Are you sure you want to calculate the dental age based on the selected stages?
+               </Text>
+               <View style={styles.confirmationButtons}>
+                 <TouchableOpacity
+                   style={styles.confirmationCancel}
+                   onPress={handleCancelConfirmation}
+                 >
+                   <Text style={styles.confirmationButtonText}>Cancel</Text>
+                 </TouchableOpacity>
+                 <TouchableOpacity
+                   style={styles.confirmationConfirm}
+                   onPress={handleConfirmAndCalculate}
+                 >
+                   <Text style={styles.confirmationButtonText}>Confirm</Text>
+                 </TouchableOpacity>
+               </View>
+             </View>
+           </View>
+         </Modal>
+
+         <View style={{ height: 24 }} />
+       </ScrollView>
     </SafeAreaView>
   );
 }
@@ -368,89 +425,109 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: padding.screenHorizontal,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.lg,
-    backgroundColor: 'rgba(247,250,253,0.8)',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: colors.primary,
+    borderBottomWidth: 0,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   backBtn: {
     paddingRight: spacing.lg,
   },
   backIcon: {
     fontSize: 24,
-    color: colors.textPrimary,
+    color: colors.white,
   },
   headerContent: {
     flex: 1,
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    fontSize: FONT_SIZES.xl,
+    fontFamily: fonts.bold,
+    color: colors.white,
   },
   headerSub: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '400',
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.regular,
+    color: colors.white,
+    opacity: 0.9,
   },
   scroll: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: CONTAINER_PADDING,
-    paddingVertical: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   progressContainer: {
     marginBottom: spacing.xl,
+    backgroundColor: colors.bgMuted,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
   progressTrack: {
-    height: 4,
+    height: 8,
     backgroundColor: colors.border,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
+    borderRadius: 4,
   },
   progressFill: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 2,
+    borderRadius: 4,
   },
   progressText: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.semiBold,
+    color: colors.textPrimary,
   },
   toothCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
-    padding: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
     marginBottom: spacing.lg,
     ...shadows.card,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  toothLabel: {
-    marginBottom: spacing.lg,
+  toothHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  toothInfo: {
+    flex: 1,
   },
   toothNumber: {
     fontSize: FONT_SIZES.xl,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     color: colors.primary,
-    marginBottom: spacing.xs,
   },
   toothName: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '400',
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
+  },
+  toothPosition: {
+    marginTop: spacing.xs,
+  },
+  toothPositionText: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: fonts.regular,
+    color: colors.textMuted,
   },
   xrayPreview: {
     width: '100%',
-    height: 200,
-    backgroundColor: colors.bgInput,
-    borderRadius: borderRadius.input,
+    height: 220,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
     marginBottom: spacing.lg,
-    position: 'relative',
+    backgroundColor: colors.bgMuted,
   },
   xrayImg: {
     width: '100%',
@@ -459,101 +536,101 @@ const styles = StyleSheet.create({
   },
   xrayOverlay: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
+    bottom: 12,
+    left: 12,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
   },
   xrayText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.semiBold,
     color: colors.white,
   },
   stageContainer: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
   },
   stageTitle: {
-    fontSize: FONT_SIZES.base,
-    fontWeight: '600',
+    fontSize: FONT_SIZES.lg,
+    fontFamily: fonts.bold,
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   stageGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
   stageButton: {
-    width: '23%',
-    paddingVertical: spacing.md,
-    backgroundColor: colors.bgInput,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1.5,
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: colors.bgMuted,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   stageButtonActive: {
     backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   stageButtonText: {
-    fontSize: FONT_SIZES.base,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  stageButtonTextActive: {
+    fontSize: FONT_SIZES.lg,
+    fontFamily: fonts.bold,
     color: colors.white,
   },
   descriptionBox: {
-    backgroundColor: colors.bgInput,
-    borderRadius: borderRadius.sm,
+    backgroundColor: colors.bgCard,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
-    borderLeftWidth: 3,
+    marginTop: spacing.md,
+    borderLeftWidth: 4,
     borderLeftColor: colors.primary,
   },
   descriptionLabel: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '600',
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.semiBold,
     color: colors.textSecondary,
     textTransform: 'uppercase',
     marginBottom: spacing.xs,
   },
   descriptionText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '400',
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.regular,
     color: colors.textPrimary,
-    lineHeight: FONT_SIZES.sm * 1.5,
+    lineHeight: FONT_SIZES.base * 1.5,
   },
   toothListContainer: {
-    backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.card,
-    padding: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
     marginBottom: spacing.lg,
     ...shadows.card,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   toothListTitle: {
-    fontSize: FONT_SIZES.base,
-    fontWeight: '600',
+    fontSize: FONT_SIZES.lg,
+    fontFamily: fonts.bold,
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   toothList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   toothListItem: {
-    width: '22%',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: colors.bgInput,
-    borderRadius: borderRadius.sm,
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: colors.bgMuted,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   toothListItemActive: {
     borderWidth: 2,
@@ -562,17 +639,17 @@ const styles = StyleSheet.create({
   toothListItemCompleted: {
     backgroundColor: colors.primaryExtraLight,
   },
-  toothListItemText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-    color: colors.textSecondary,
+  toothListItemContent: {
+    alignItems: 'center',
   },
-  toothListItemTextActive: {
-    color: colors.primary,
+  toothListItemNumber: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.bold,
+    color: colors.textPrimary,
   },
   toothListItemStage: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '700',
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.semiBold,
     color: colors.primary,
     marginTop: spacing.xs,
   },
@@ -587,31 +664,42 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgInput,
     borderRadius: borderRadius.button,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    justifyContent: 'center',
   },
   navButtonDisabled: {
     opacity: 0.5,
   },
   navButtonText: {
     fontSize: FONT_SIZES.base,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
     color: colors.textPrimary,
   },
   calculateButton: {
-    paddingVertical: spacing.lg,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.button,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
     ...shadows.button,
   },
   calculateButtonDisabled: {
     backgroundColor: colors.textMuted,
   },
+  calculateButtonContent: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
   calculateButtonText: {
     fontSize: FONT_SIZES.base,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     color: colors.white,
+  },
+  calculateButtonSubtext: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
   },
   calculateButtonLoading: {
     opacity: 0.8,
@@ -633,15 +721,68 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: FONT_SIZES.h3,
-    fontWeight: '600',
+    fontFamily: fonts.bold,
     color: colors.text,
     marginTop: spacing.md,
     textAlign: 'center',
   },
   loadingSubtext: {
     fontSize: FONT_SIZES.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: spacing.xs,
     textAlign: 'center',
+  },
+  confirmationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmationBox: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    width: '80%',
+    maxWidth: 300,
+    alignItems: 'center',
+  },
+  confirmationTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontFamily: fonts.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  confirmationMessage: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: spacing.lg,
+  },
+  confirmationCancel: {
+    flex: 1,
+    backgroundColor: colors.bgMuted,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+    marginHorizontal: spacing.xs,
+  },
+  confirmationConfirm: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.md,
+    marginHorizontal: spacing.xs,
+  },
+  confirmationButtonText: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.semiBold,
+    color: colors.white,
   },
 });

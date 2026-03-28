@@ -1,50 +1,54 @@
 export const colors = {
-  // Brand
-  primary: '#4d55a2',
-  primaryLight: '#666ebd',
-  primaryExtraLight: '#eef2ff',
-  primaryAccent: '#4338ca',
+  // Brand - Dental/Medical Blue theme
+  primary: '#2563eb',      // Dental blue - professional and trustworthy
+  primaryLight: '#3b82f6',
+  primaryExtraLight: '#dbeafe',
+  primaryAccent: '#1d4ed8',
 
   // Background
-  bgScreen: '#f7fafd',
+  bgScreen: '#f8fafc',     // Light slate - clean and modern
   bgCard: '#ffffff',
-  bgMuted: '#f1f4f7',
-  bgInput: '#e0e3e6',
+  bgMuted: '#f1f5f9',
+  bgInput: '#e2e8f0',
 
   // Text
-  textPrimary: '#181c1e',
-  textSecondary: '#464651',
-  textMuted: '#94a3b8',
+  textPrimary: '#0f172a',   // Dark slate - excellent readability
+  textSecondary: '#475569', // Slate gray - secondary information
+  textMuted: '#94a3b8',     // Light slate - placeholder/disabled text
   textDisabled: '#64748b',
   textPlaceholder: 'rgba(118,118,130,0.6)',
 
-  // Accents
-  indigo: '#6366f1',
-  indigoDark: '#4338ca',
-  teal: '#70aeff',
-  tealDark: '#004077',
-  green: '#15803d',
+  // Accents - Medical/Dental appropriate
+  indigo: '#6366f1',        // For highlights and accents
+  indigoDark: '#4f46e5',
+  teal: '#0d9488',          // Healthy/green accent for dental health
+  tealDark: '#0f766e',
+  green: '#10b981',         // Success/positive indicator
   greenBg: '#dcfce7',
-  red: '#dc2626',
+  red: '#ef4444',           // Warning/error indicator
   redBg: '#fee2e2',
+  yellow: '#f59e0b',        // Caution/warning
+  yellowBg: '#fffbeb',
+  purple: '#8b5cf6',        // For special features
+  purpleBg: '#f5f3ff',
 
   // Borders
-  border: 'rgba(198,197,211,0.1)',
-  borderSubtle: 'rgba(198,197,211,0.2)',
-  borderStrong: '#c6c5d3',
+  border: 'rgba(203,213,225,0.2)',   // Slate 200 with opacity
+  borderSubtle: 'rgba(203,213,225,0.1)',
+  borderStrong: '#cbd5e1',
 
   // White/overlays
   white: '#ffffff',
-  overlayLight: 'rgba(255,255,255,0.1)',
-  overlayBlur: 'rgba(248,250,252,0.8)',
+  overlayLight: 'rgba(255,255,255,0.05)',
+  overlayBlur: 'rgba(248,250,252,0.7)',
 };
 
 export const fonts = {
-  regular: 'System',
-  medium: 'System',
-  semiBold: 'System',
-  bold: 'System',
-  extraBold: 'System',
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semiBold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+  extraBold: 'Inter_800ExtraBold',
 };
 
 export const spacing = {

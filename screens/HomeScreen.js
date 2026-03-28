@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   ActivityIndicator, Alert,
   StatusBar,
   Image,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radius, shadows } from '../theme';
+import { colors, radius, shadows, fonts } from '../theme';
 import { useState } from 'react';
 
 import { openImagePicker } from '../services/expo/imagePicker';
@@ -35,18 +36,18 @@ import {
 } from '../constants/layout';
 
 const ASSETS = {
-  profilePic: 'https://www.figma.com/api/mcp/asset/c0ea0520-82ae-49f1-b629-baa5bff5e830',
-  settingsIcon: 'https://www.figma.com/api/mcp/asset/61719cfc-29ee-4e38-a422-1c5d6a967389',
-  heroDecor: 'https://www.figma.com/api/mcp/asset/86a90b07-d531-4d4d-b315-cc9d2f0bd311',
-  uploadIcon: 'https://www.figma.com/api/mcp/asset/0493bf48-fa1d-4f32-af12-79ab3e600e49',
-  analyzeArrow: 'https://www.figma.com/api/mcp/asset/6d62369b-ef0c-448c-b155-d572cf6bbf2d',
-  patientIcon: 'https://www.figma.com/api/mcp/asset/321cf6ba-5b09-4f6d-b3e2-d744e31bd881',
-  fabIcon: 'https://www.figma.com/api/mcp/asset/1ac15ecc-d2a1-4455-a3d3-3a330fa12f45',
-  xrayImg: 'https://www.figma.com/api/mcp/asset/c494860f-8dca-4cf4-bba5-56f6cc881bac',
-  reportIcon: 'https://www.figma.com/api/mcp/asset/2b967492-07f0-45c5-85ac-c94485717f14',
-  dashIcon: 'https://www.figma.com/api/mcp/asset/76fd9b13-d1af-4740-971d-946f2863e9e3',
-  assessIcon: 'https://www.figma.com/api/mcp/asset/63821066-e236-40b7-b5a3-882e75586094',
-  settingsNavIcon: 'https://www.figma.com/api/mcp/asset/d04e1c8c-4588-4c97-8808-53a66b050009',
+  profilePic: require('../assets/images/default_profile_photo.jpg'),
+  settingsIcon: require('../assets/icons/settings-icon.png'),
+  heroDecor: require('../assets/images/hero-decor.png'),
+  uploadIcon: require('../assets/icons/upload-icon.png'),
+  analyzeArrow: require('../assets/icons/analyze-arrow.png'),
+  patientIcon: require('../assets/icons/patient-icon.png'),
+  fabIcon: require('../assets/icons/fab-icon.png'),
+  xrayImg: require('../assets/images/opg-sample.jpg'),
+  reportIcon: require('../assets/icons/report-icon.png'),
+  dashIcon: require('../assets/icons/dashboard-icon.png'),
+  assessIcon: require('../assets/icons/assessment-icon.png'),
+  settingsNavIcon: require('../assets/icons/settings-nav-icon.png'),
 };
 
 const initialPatientData = [
@@ -102,7 +103,12 @@ export default function HomeScreen({ navigation }) {
     return <ActivityIndicator size="large" />;
   }
 
-  console.log("the user is here" , profile);
+  // Handle refresh gesture
+  const handleRefresh = useCallback(() => {
+    // In a real app, this would trigger a data refresh
+    // For now, we'll just show a temporary indicator
+    console.log('Refreshing dashboard...');
+  }, []);
 
   const handleDeletePatient = (patientId) => {
     setPatients(patients.filter(p => p.id !== patientId));
@@ -134,7 +140,11 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.topBarLeft}>
           <View style={styles.profileBorder}>
             <Image source={ profile?.profile_photo_url ? { uri: profile.profile_photo_url } 
-      : DEFAULT_PROFILE_PHOTO } style={styles.profilePic} />
+        : DEFAULT_PROFILE_PHOTO } style={styles.profilePic} />
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>{profile?.full_name || 'Welcome'}</Text>
+            <Text style={styles.profileSubtitle}>{profile?.email_id || 'clinician@sanctuary.com'}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.settingsBtn}>
@@ -146,44 +156,69 @@ export default function HomeScreen({ navigation }) {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={handleRefresh}
+          />
+        }
       >
         {/* ── Hero Section ── */}
         <View style={styles.heroSection}>
-          {/* Stats Card (top) */}
-          <View style={styles.heroCard}>
-            <Image source={{ uri: ASSETS.heroDecor }} style={styles.heroDecor} />
-            <View style={styles.heroContent}>
-              <Text style={styles.heroGreeting}>Morning, {profile?.full_name}</Text>
-              <Text style={styles.heroTitle}>Clinical Precision{'\n'}Tool</Text>
-              <View style={styles.heroPills}>
-                <View style={styles.heroPill}>
-                  <Text style={styles.heroPillLabel}>ASSESSMENTS{'\n'}TODAY</Text>
-                  <Text style={styles.heroPillValue}>14</Text>
-                </View>
-                <View style={styles.heroPill}>
-                  <Text style={styles.heroPillLabel}>AVG.{'\n'}ACCURACY</Text>
-                  <Text style={styles.heroPillValue}>98.4%</Text>
-                </View>
-              </View>
+          {/* Welcome Banner */}
+          <View style={styles.welcomeBanner}>
+            <View style={styles.welcomeContent}>
+              <Text style={styles.welcomeGreeting}>Good morning,</Text>
+              <Text style={styles.welcomeName}>{profile?.full_name || 'Dr. Smith'}</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Ready for today's assessments?
+              </Text>
+            </View>
+            <View style={styles.welcomeIcon}>
+              <Image source={require('../assets/images/tooth-icon.png')} style={styles.welcomeImg} />
             </View>
           </View>
 
-          {/* Quick Scan Card (bottom) */}
-          <View style={styles.quickScanCard}>
-            <View style={styles.quickScanTop}>
-              <Text style={styles.quickScanTitle}>Quick Scan</Text>
-              <Image source={{ uri: ASSETS.uploadIcon }} style={styles.quickScanIcon} />
-            </View>
-            <Text style={styles.quickScanSub}>
-              AI ready for high-resolution panoramic upload.
-            </Text>
+          {/* Quick Action Cards */}
+          <View style={styles.actionCards}>
+            {/* New Assessment Card */}
             <TouchableOpacity
-              style={styles.analyzeBtn}
+              style={styles.actionCard}
               activeOpacity={0.85}
-              onPress={handleUploadAndAnalyze}
+              onPress={() => navigation?.navigate('XRayAnalysis')}
             >
-              <Image source={{ uri: ASSETS.analyzeArrow }} style={styles.analyzeBtnIcon} />
-              <Text style={styles.analyzeBtnText}>Analyze X-Ray</Text>
+              <View style={styles.actionIcon}>
+                <Image source={require('../assets/icons/upload-icon.png')} style={styles.actionImg} />
+              </View>
+              <View style={styles.actionInfo}>
+                <Text style={styles.actionTitle}>New Assessment</Text>
+                <Text style={styles.actionSubtitle}>
+                  Start a fresh dental age analysis
+                </Text>
+              </View>
+              <View style={styles.actionArrow}>
+                <Text style={styles.actionArrowText}>→</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Recent Assessments Card */}
+            <TouchableOpacity
+              style={styles.actionCard}
+              activeOpacity={0.85}
+              onPress={() => { /* Navigate to assessments list */ }}
+            >
+              <View style={styles.actionIcon}>
+                <Image source={require('../assets/icons/history-icon.png')} style={styles.actionImg} />
+              </View>
+              <View style={styles.actionInfo}>
+                <Text style={styles.actionTitle}>Recent Assessments</Text>
+                <Text style={styles.actionSubtitle}>
+                  View your latest analyses
+                </Text>
+              </View>
+              <View style={styles.actionArrow}>
+                <Text style={styles.actionArrowText}>→</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -196,7 +231,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.viewAllBtn}>View All</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.patientList}>
+          <View style={styles.assessmentsList}>
             {patients.length > 0 ? (
               patients.map((p) => (
                 <PatientCard
@@ -208,7 +243,11 @@ export default function HomeScreen({ navigation }) {
               ))
             ) : (
               <View style={styles.emptyState}>
+                <Image source={require('../assets/icons/empty-state.png')} style={styles.emptyStateImg} />
                 <Text style={styles.emptyStateText}>No assessments yet</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Start your first analysis to see patient history here
+                </Text>
               </View>
             )}
           </View>
@@ -220,7 +259,7 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Activity</Text>
               <TouchableOpacity onPress={handleDeleteActivity}>
-                <Text style={styles.deleteActivityBtn}>Clear</Text>
+                <Text style={styles.viewAllBtn}>Clear</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.activityCard}>
@@ -253,7 +292,7 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* Bottom padding for FAB */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* ── FAB ── */}
@@ -306,9 +345,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xxl,
-    backgroundColor: 'rgba(248,250,252,0.8)',
+    backgroundColor: colors.bgCard,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(99,102,241,0.05)',
+    borderBottomColor: colors.border,
   },
   topBarLeft: { flexDirection: 'row', alignItems: 'center', gap: gaps.md },
   profileBorder: {
@@ -321,107 +360,144 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profilePic: { width: '100%', height: '100%', borderRadius: scale(18) },
+  profileInfo: { flex: 1, marginLeft: spacing.md },
+  profileName: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.semiBold,
+    color: colors.textPrimary,
+  },
+  profileSubtitle: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: fonts.regular,
+    color: colors.textMuted,
+  },
   settingsBtn: { padding: spacing.sm, borderRadius: spacing.xxl },
   settingsIcon: { width: ICON_SIZES.md, height: ICON_SIZES.md, resizeMode: 'contain' },
 
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: CONTAINER_PADDING, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
 
-  // Hero
+  // Hero Section
   heroSection: { gap: gaps.lg, marginBottom: spacing.xxl },
-  heroCard: {
-    borderRadius: borderRadius.card,
-    overflow: 'hidden',
-    padding: padding.card,
+  welcomeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.primary,
+    padding: spacing.xl,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.lg,
     ...shadows.hero,
   },
-  heroDecor: {
-    position: 'absolute',
-    bottom: -spacing.xl,
-    right: -spacing.xl,
-    width: 133,
-    height: 133,
-    opacity: 0.3,
+  welcomeContent: {
+    flex: 1,
   },
-  heroContent: { gap: gaps.xs },
-  heroGreeting: { fontSize: 14, fontWeight: '500', color: '#e0e0ff', opacity: 0.9 },
-  heroTitle: {
-    fontSize: FONT_SIZES.huge,
-    fontWeight: '700',
+  welcomeIcon: {
+    width: 60,
+    height: 60,
+    marginLeft: spacing.lg,
+  },
+  welcomeImg: {
+    width: '100%',
+    height: '100%',
+  },
+  welcomeGreeting: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.regular,
     color: colors.white,
-    letterSpacing: -0.75,
-    lineHeight: FONT_SIZES.huge * 1.2,
-    marginBottom: gaps.lg,
+    opacity: 0.9,
   },
-  heroPills: { flexDirection: 'row', gap: gaps.lg },
-  heroPill: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: padding.input,
-    paddingVertical: padding.input,
-  },
-  heroPillLabel: {
-    fontSize: 10,
-    fontWeight: '400',
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    lineHeight: 14,
-  },
-  heroPillValue: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: '700',
+  welcomeName: {
+    fontSize: FONT_SIZES.xl,
+    fontFamily: fonts.bold,
     color: colors.white,
+  },
+  welcomeSubtitle: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: fonts.regular,
+    color: colors.white,
+    opacity: 0.8,
     marginTop: spacing.xs,
   },
 
-  // Quick Scan
-  quickScanCard: {
+  // Quick Action Cards
+  actionCards: {
+    gap: spacing.md,
+  },
+  actionCard: {
     backgroundColor: colors.bgCard,
     borderRadius: borderRadius.card,
-    borderWidth: 1,
-    borderColor: 'rgba(198,197,211,0.1)',
-    padding: padding.card,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
     ...shadows.card,
   },
-  quickScanTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: gaps.sm,
-  },
-  quickScanTitle: { fontSize: 16, fontWeight: '600', color: colors.textSecondary },
-  quickScanIcon: { width: 16, height: 20, resizeMode: 'contain' },
-  quickScanSub: { fontSize: FONT_SIZES.base, color: colors.textSecondary, lineHeight: FONT_SIZES.base * 1.4, marginBottom: gaps.lg },
-  analyzeBtn: {
-    flexDirection: 'row',
+  actionIcon: {
+    width: 40,
+    height: 40,
+    backgroundColor: colors.primaryExtraLight,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.teal,
-    borderRadius: borderRadius.button,
-    paddingVertical: padding.input,
-    gap: gaps.sm,
   },
-  analyzeBtnIcon: { width: 9, height: 9, resizeMode: 'contain' },
-  analyzeBtnText: { fontSize: 16, fontWeight: '600', color: colors.tealDark },
-
-  // Section
-  section: { marginBottom: spacing.xxl },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    marginBottom: gaps.lg,
+  actionImg: {
+    width: '100%',
+    height: '100%',
+    tintColor: colors.primary,
   },
-  sectionTitle: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: '700',
+  actionInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  actionTitle: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.semiBold,
     color: colors.textPrimary,
-    letterSpacing: -0.5,
   },
-  viewAllBtn: { fontSize: 14, fontWeight: '600', color: colors.primary },
+  actionSubtitle: {
+    fontSize: FONT_SIZES.xs,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+  },
+  actionArrow: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionArrowText: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.medium,
+    color: colors.textSecondary,
+  },
+
+  // Assessments List
+  assessmentsList: {
+    marginBottom: spacing.lg,
+  },
+  emptyState: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bgMuted,
+    borderRadius: borderRadius.lg,
+  },
+  emptyStateImg: {
+    width: 60,
+    height: 60,
+    marginBottom: spacing.md,
+  },
+  emptyStateText: {
+    fontSize: FONT_SIZES.base,
+    fontFamily: fonts.semiBold,
+    color: colors.textSecondary,
+  },
+  emptyStateSubtext: {
+    fontSize: FONT_SIZES.sm,
+    fontFamily: fonts.regular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
 
   // Patient Cards
   patientList: { gap: gaps.md },
@@ -447,7 +523,7 @@ const styles = StyleSheet.create({
   patientAvatarIcon: { width: 16, height: 16, resizeMode: 'contain' },
   patientName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     color: colors.textPrimary,
     lineHeight: 22,
   },
@@ -467,10 +543,11 @@ const styles = StyleSheet.create({
 
   // Activity Card
   activityCard: {
-    backgroundColor: '#f1f4f7',
+    backgroundColor: colors.bgCard,
     borderRadius: borderRadius.card,
     padding: padding.section,
     gap: gaps.xl,
+    ...shadows.card,
   },
   xrayWrapper: { gap: gaps.md },
   xrayImg: {
@@ -533,32 +610,13 @@ const styles = StyleSheet.create({
   bottomNav: {
     height: BOTTOM_NAV_HEIGHT,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingBottom: spacing.sm,
+    borderTopColor: colors.border,
   },
-  navTab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
-    gap: gaps.xs,
-  },
-  navTabActive: { backgroundColor: colors.primaryExtraLight },
-  navIcon: { width: 18, height: 18, resizeMode: 'contain', opacity: 0.5 },
-  navIconActive: { opacity: 1 },
-  navLabel: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '500',
-    color: colors.textMuted,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-  },
-  navLabelActive: { color: colors.indigoDark },
+  navTab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  navLabel: { fontSize: FONT_SIZES.xs, fontWeight: '500', color: colors.textMuted, letterSpacing: 0.3 },
+  navLabelActive: { color: colors.primary, fontWeight: '700' },
 
   // Delete Functionality
   patientCardContainer: {
@@ -579,28 +637,13 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     color: colors.white,
     textAlign: 'center',
   },
-  emptyState: {
-    paddingVertical: padding.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(99,102,241,0.03)',
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.1)',
-    borderStyle: 'dashed',
-  },
-  emptyStateText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
   deleteActivityBtn: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
     color: colors.red,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
@@ -611,7 +654,7 @@ const styles = StyleSheet.create({
   },
   deleteActivityIcon: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
     color: colors.red,
   },
 });

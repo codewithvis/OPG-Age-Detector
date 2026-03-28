@@ -16,13 +16,13 @@ import {
   borderRadius,
 } from '../constants/layout';
 
-// Asset URLs from Figma (valid for 7 days)
+// Asset URLs from Figma (valid for 7 days) - replaced with local assets
 const ASSETS = {
-  toothIcon: 'https://www.figma.com/api/mcp/asset/49d306fa-08c4-463e-bc96-c5d169afefaa',
-  emailIcon: 'https://www.figma.com/api/mcp/asset/1c1b2e53-3e5e-49b2-bb70-a787ed7ea3b4',
-  lockIcon: 'https://www.figma.com/api/mcp/asset/358a9777-fbb8-4acf-a6d7-13df5b024663',
-  eyeIcon: 'https://www.figma.com/api/mcp/asset/d74e0d06-2e09-4a90-82a4-859ff8b10c62',
-  arrowIcon: 'https://www.figma.com/api/mcp/asset/78c461cf-e3ce-40e2-bf40-3afcccbb51a2',
+  toothIcon: require('../assets/images/placeholder.png'),
+  emailIcon: require('../assets/images/placeholder.png'),
+  lockIcon: require('../assets/images/placeholder.png'),
+  eyeIcon: require('../assets/images/placeholder.png'),
+  arrowIcon: require('../assets/images/placeholder.png'),
 };
 
 export default function LoginScreen({ navigation }) {

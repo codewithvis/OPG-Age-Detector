@@ -11,13 +11,9 @@ import {
   Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radius, shadows } from '../theme';
+import { colors, radius, shadows, fonts } from '../theme';
 import { supabase } from '../services/supabase';
 import { useAssessment } from '../provider/AssessmentProvider';
-
-const XRAY_IMG = 'https://www.figma.com/api/mcp/asset/c494860f-8dca-4cf4-bba5-56f6cc881bac';
-const SHARE_ICON = 'https://www.figma.com/api/mcp/asset/61719cfc-29ee-4e38-a422-1c5d6a967389';
-
 import { scale } from '../utils/responsive';
 import {
   FONT_SIZES,
@@ -156,22 +152,27 @@ export default function XRayAnalysisScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Analysis Header & Toggle ── */}
-        <View style={styles.analysisHeader}>
-          <View style={styles.analysisTitle}>
-            <Text style={styles.analysisTitleText}>Mandibular Left Arch</Text>
-            <Text style={styles.analysisSub}>AI-assisted tooth identification and segmentation</Text>
-          </View>
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>AI Overlay</Text>
-            <TouchableOpacity
-              style={[styles.toggle, overlayEnabled && styles.toggleActive]}
-              onPress={() => setOverlayEnabled(!overlayEnabled)}
-            >
-              <View style={[styles.toggleThumb, overlayEnabled && styles.toggleThumbActive]} />
-            </TouchableOpacity>
-          </View>
-        </View>
+       {/* ── Analysis Header & Toggle ── */}
+       <View style={styles.analysisHeader}>
+         <View style={styles.analysisTitle}>
+           <Text style={styles.analysisTitleText}>Dental Analysis</Text>
+           <Text style={styles.analysisSub}>AI-powered tooth development assessment</Text>
+         </View>
+         <View style={styles.toggleContainer}>
+           <Text style={styles.toggleLabel}>Show AI Detection</Text>
+           <TouchableOpacity
+             style={[styles.toggle, overlayEnabled && styles.toggleActive]}
+             onPress={() => setOverlayEnabled(!overlayEnabled)}
+           >
+             <View style={styles.toggleTrack}>
+               <View style={[
+                 styles.toggleThumb,
+                 overlayEnabled && styles.toggleThumbActive,
+               ]} />
+             </View>
+           </TouchableOpacity>
+         </View>
+       </View>
 
         {/* ── Radiograph Viewport ── */}
         <View style={styles.viewport}>
@@ -348,21 +349,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xxl,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: colors.bgCard,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   topLeft: { flexDirection: 'row', alignItems: 'center', gap: gaps.md },
   backBtn: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(16),
-    backgroundColor: colors.bgCard,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryExtraLight,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.card,
   },
   backArrow: { fontSize: FONT_SIZES.base, color: colors.textPrimary },
-  topTitle: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.4 },
+  topTitle: { fontSize: FONT_SIZES.xl, fontFamily: fonts.bold, color: colors.textPrimary, letterSpacing: -0.4 },
   actionBtn: { padding: spacing.sm, borderRadius: spacing.xl },
   actionIcon: { width: spacing.xxl, height: spacing.xxl, resizeMode: 'contain' },
 
@@ -371,47 +375,52 @@ const styles = StyleSheet.create({
   analysisTitle: { gap: gaps.xs, marginBottom: gaps.md },
   analysisTitleText: {
     fontSize: FONT_SIZES.xxl,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
-  analysisSub: { fontSize: FONT_SIZES.sm, fontWeight: '400', color: colors.textSecondary },
-  toggleRow: {
+  analysisSub: { fontSize: FONT_SIZES.sm, fontFamily: fonts.regular, color: colors.textSecondary },
+  toggleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: gaps.md,
+    gap: gaps.sm,
     backgroundColor: colors.bgCard,
-    borderRadius: borderRadius.button,
-    padding: spacing.md,
+    borderRadius: 12,
+    padding: spacing.sm,
     paddingHorizontal: spacing.md,
   },
-  toggleLabel: { fontSize: FONT_SIZES.sm, fontWeight: '500', color: colors.textSecondary, flex: 1 },
+  toggleLabel: { fontSize: FONT_SIZES.sm, fontFamily: fonts.medium, color: colors.textSecondary, flex: 1 },
   toggle: {
-    width: scale(44),
-    height: scale(24),
-    borderRadius: scale(12),
+    width: 44,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: colors.bgInput,
-    padding: spacing.xs,
+    padding: 4,
     justifyContent: 'center',
   },
   toggleActive: { backgroundColor: colors.primary },
-  toggleThumb: {
-    width: scale(20),
-    height: scale(20),
-    borderRadius: scale(10),
+  toggleTrack: {
+    width: 36,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: colors.white,
-    alignSelf: 'flex-start',
-    ...shadows.card,
   },
-  toggleThumbActive: { alignSelf: 'flex-end' },
+  toggleThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.primary,
+  },
+  toggleThumbActive: { transform: [{ translateX: 10 }] },
 
   // Viewport
   viewport: {
-    height: scale(200),
+    height: scale(220),
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     marginBottom: gaps.lg,
     position: 'relative',
+    backgroundColor: colors.bgMuted,
   },
   xrayImg: { width: '100%', height: '100%', resizeMode: 'cover' },
   overlayLayer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
@@ -422,49 +431,49 @@ const styles = StyleSheet.create({
     width: '35%',
     height: '36%',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 4,
+    borderColor: 'rgba(13,148,136,0.3)', // Teal with opacity
+    borderRadius: 8,
   },
   detectionLabel: {
     position: 'absolute',
-    top: spacing.xl * -1,
+    top: -12,
     left: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: borderRadius.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  detectionLabelText: { fontSize: FONT_SIZES.xs, fontWeight: '500', color: colors.white },
+  detectionLabelText: { fontSize: FONT_SIZES.xs, fontFamily: fonts.medium, color: colors.white },
   toothMarker: {
     position: 'absolute',
-    width: scale(22),
-    height: scale(22),
-    borderRadius: scale(11),
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.7)',
+    borderColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
-    transform: [{ translateX: -11 }, { translateY: -11 }],
+    transform: [{ translateX: -12 }, { translateY: -12 }],
   },
   toothMarkerActive: {
     backgroundColor: colors.primary,
     borderColor: colors.white,
   },
-  toothMarkerText: { fontSize: FONT_SIZES.xs, fontWeight: '700', color: colors.white },
-  toothMarkerTextActive: { color: colors.white },
+  toothMarkerText: { fontSize: FONT_SIZES.xs, fontFamily: fonts.bold, color: colors.white },
+  toothMarkerTextActive: { fontFamily: fonts.bold, color: colors.white },
 
   viewportControls: {
     position: 'absolute',
-    bottom: spacing.sm,
-    right: spacing.sm,
+    bottom: 16,
+    right: 16,
     flexDirection: 'row',
-    gap: gaps.sm,
+    gap: 8,
   },
   controlBtn: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: borderRadius.md,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -475,83 +484,83 @@ const styles = StyleSheet.create({
   infoCard: {
     backgroundColor: colors.bgCard,
     borderRadius: borderRadius.lg,
-    padding: padding.section,
+    padding: spacing.md,
     marginBottom: gaps.md,
     ...shadows.card,
     gap: gaps.md,
   },
-  infoCardTitle: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    letterSpacing: 0.3,
-  },
+   infoCardTitle: {
+  fontSize: FONT_SIZES.sm,
+  fontFamily: fonts.semiBold,
+  color: colors.textSecondary,
+  letterSpacing: 0.3,
+},
   confidenceRow: { flexDirection: 'row', alignItems: 'baseline', gap: gaps.xs },
-  confidencePct: { fontSize: FONT_SIZES.huge, fontWeight: '700', color: colors.textPrimary, letterSpacing: -1 },
-  confidenceUnit: { fontSize: FONT_SIZES.xl, fontWeight: '700', color: colors.textMuted },
-  progressBg: {
-    height: scale(6),
+   confidencePct: { fontSize: FONT_SIZES.huge, fontFamily: fonts.bold, color: colors.textPrimary, letterSpacing: -1 },
+   confidenceUnit: { fontSize: FONT_SIZES.xl, fontFamily: fonts.bold, color: colors.textMuted },
+   progressBg: {
+    height: 8,
     backgroundColor: colors.bgMuted,
-    borderRadius: scale(3),
+    borderRadius: 4,
     overflow: 'hidden',
-  },
-  progressFill: {
+   },
+   progressFill: {
     height: '100%',
-    borderRadius: scale(3),
+    borderRadius: 4,
     backgroundColor: colors.primary,
-  },
+   },
 
-  detectedHeader: {
+   detectedHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  detectedBadge: {
+   },
+   detectedBadge: {
     backgroundColor: colors.primaryExtraLight,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  detectedBadgeText: { fontSize: FONT_SIZES.xs, fontWeight: '600', color: colors.primary },
-  toothTagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: gaps.sm },
-  toothTag: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+   },
+    detectedBadgeText: { fontSize: FONT_SIZES.xs, fontFamily: fonts.semiBold, color: colors.primary },
+   toothTagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: gaps.sm },
+   toothTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
     backgroundColor: colors.bgMuted,
-    borderRadius: borderRadius.button,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderWidth: 1.5,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
     borderColor: 'transparent',
-  },
-  toothTagDot: { width: scale(8), height: scale(8), borderRadius: scale(4) },
-  toothTagText: { fontSize: FONT_SIZES.sm, fontWeight: '500', color: colors.textSecondary },
+   },
+   toothTagDot: { width: 6, height: 6, borderRadius: 3 },
+   toothTagText: { fontSize: FONT_SIZES.sm, fontFamily: fonts.regular, color: colors.textSecondary },
 
-  // Action
-  actionArea: { marginBottom: gaps.lg },
-  proceedBtn: {
+   // Action
+   actionArea: { marginBottom: gaps.lg },
+   proceedBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
-    borderRadius: borderRadius.card,
-    paddingVertical: spacing.xl,
+    borderRadius: 12,
+    paddingVertical: spacing.lg,
     gap: gaps.sm,
     ...shadows.button,
-  },
-  proceedBtnText: { fontSize: FONT_SIZES.base, fontWeight: '700', color: colors.white },
-  proceedBtnArrow: { fontSize: FONT_SIZES.xl, color: colors.white },
+   },
+   proceedBtnText: { fontSize: FONT_SIZES.base, fontFamily: fonts.bold, color: colors.white },
+   proceedBtnArrow: { fontSize: FONT_SIZES.xl, color: colors.white },
 
-  // Bottom Nav
-  bottomNav: {
+   // Bottom Nav
+   bottomNav: {
     height: BOTTOM_NAV_HEIGHT,
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  navTab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  navLabel: { fontSize: FONT_SIZES.xs, fontWeight: '500', color: colors.textMuted, letterSpacing: 0.3 },
-  navLabelActive: { color: colors.primary, fontWeight: '700' },
+   },
+   navTab: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+   navLabel: { fontSize: FONT_SIZES.xs, fontWeight: '500', color: colors.textMuted, letterSpacing: 0.3 },
+   navLabelActive: { color: colors.primary, fontWeight: '700' },
 });

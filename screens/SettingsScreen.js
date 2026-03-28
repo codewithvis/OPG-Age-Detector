@@ -30,7 +30,7 @@ import { useAuth } from '../provider/AuthProvider';
 import { useProfile } from '../api/profile';
 import { DEFAULT_PROFILE_PHOTO } from '../constants/constants';
 
-const PROFILE_IMG = 'https://www.figma.com/api/mcp/asset/c0ea0520-82ae-49f1-b629-baa5bff5e830';
+
 
 function ToggleRow({ icon, title, subtitle, value, onChange }) {
   return (

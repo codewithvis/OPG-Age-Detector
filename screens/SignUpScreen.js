@@ -27,8 +27,8 @@ import {
 } from '../constants/layout';
 
 const ASSETS = {
-  toothIcon: 'https://www.figma.com/api/mcp/asset/49d306fa-08c4-463e-bc96-c5d169afefaa',
-  eyeIcon: 'https://www.figma.com/api/mcp/asset/d74e0d06-2e09-4a90-82a4-859ff8b10c62',
+  toothIcon: require('../assets/images/placeholder.png'),
+  eyeIcon: require('../assets/images/placeholder.png'),
 };
 
 export default function SignUpScreen({ navigation }) {
