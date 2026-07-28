@@ -1,30 +1,28 @@
-# Walkthrough - AI Image Validation & Safety Guardrails
+# Walkthrough - Android Manifest Configuration
 
-I have implemented strict validation guardrails in the AI analysis pipeline to ensure only dental radiographs are processed, preventing the app from generating "guessed" results for unrelated images.
+I have updated the project configuration and regenerated the `AndroidManifest.xml` to ensure it contains the necessary permissions and clinical settings.
 
 ## Changes Made
 
-### 1. AI Edge Function (Enforcement)
-- **Mandatory Relevance Check**: Updated the Gemini System Prompt to include a pre-analysis step. The AI now evaluates if the image is a valid dental radiograph (OPG, Periapical, or Bitewing).
-- **Strict Rejection Protocol**: If the AI detects an unrelated image (e.g., a person, landscape, animal, or car), it is instructed to halt analysis and return a standardized `INVALID_IMAGE_TYPE` error code.
-- **Improved Prompt Engineering**: Explicitly defined the boundaries of clinical relevance to prevent the model from halllucinating dental stages on non-dental assets.
+### 1. Permission Updates (`app.json`)
+- Added explicit clinical and hardware permissions:
+    - `android.permission.CAMERA`: Required for capturing radiographs.
+    - `android.permission.READ_EXTERNAL_STORAGE`: Required for gallery uploads.
+    - `android.permission.WRITE_EXTERNAL_STORAGE`: Required for saving reports.
 
-### 2. Frontend Rejection UI
-- **New Rejection State**: Added a `rejected` status to the `AnalysisView` screen to handle clinical mismatches gracefully.
-- **Clinical Rejection Feedback**: When an invalid image is detected, the app now shows a high-contrast "Image Rejected" status with a clear explanation: *"Clinical Rejection: The uploaded image is not a recognized dental radiograph."*
-- **Action Blocking**: If an image is rejected, the "Review Results" button is replaced with a "Try Different Image" action, preventing the user from proceeding to the Stage Classification screen with invalid data.
-
-### 3. Logic & Error Propagation
-- **Robust Parsing**: Updated the edge function to handle 422 (Unprocessable Entity) errors when rejection occurs.
-- **Error Bridging**: Refined the `AnalysisView` catch block to specifically look for the `INVALID_IMAGE_TYPE` flag and update the UI accordingly.
+### 2. Manifest Generation
+- Ran `npx expo prebuild` to synchronize the `android/` directory with the latest `app.json` settings.
+- The `AndroidManifest.xml` (located at `android/app/src/main/AndroidManifest.xml`) now includes:
+    - Updated hardware permissions.
+    - Correct intent filters for deep linking (`dentage://`).
+    - Standard clinical-grade application settings.
 
 ## Verification Results
 
 ### Successes
-- [x] **Safety Guardrail**: The AI now correctly identifies and refuses to analyze non-dental images.
-- [x] **UI Experience**: The rejection workflow is clear and prevents clinical errors.
-- [x] **Type Safety**: `tsc --noEmit` returns 0 errors.
-- [x] **System Health**: `npx expo-doctor` confirms 100% environment stability.
+- [x] **Manifest Integrity**: Verified that `android/app/src/main/AndroidManifest.xml` now contains the `<uses-permission android:name="android.permission.CAMERA"/>` tag.
+- [x] **Prebuild Pass**: The native directory was successfully synchronized without errors.
+- [x] **Configuration Matching**: The manifest now correctly reflects the `owner` and `projectId` changes made in previous steps.
 
-> [!CAUTION]
-> This guardrail relies on the AI's visual reasoning. While highly effective at filtering out unrelated photos (cars, nature, faces), practitioners should still perform a final visual audit of the OPG before generating reports.
+> [!NOTE]
+> In an Expo project, you should avoid modifying the `AndroidManifest.xml` directly. Instead, make changes in `app.json` and run `npx expo prebuild`. This ensures your changes are persistent and compatible with EAS builds.

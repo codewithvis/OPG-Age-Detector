@@ -1,47 +1,44 @@
-# 🦷 DentAge — AI-Powered Dental Age Estimation
+# 🦷 DentAge — Enterprise Clinical AI Edition
 
-A clinical dental age estimation app built with **React Native (Expo)** and **Supabase**. Upload an OPG (orthopantomogram) radiograph and get an AI-powered age estimation using Demirjian's development stages of 7 mandibular left permanent teeth.
-
----
-
-## ✨ Features
-
-- 📸 **OPG Radiograph Upload** — Pick or capture dental X-rays from device
-- 🤖 **AI Analysis (Gemini 2.5 Flash)** — Automated Demirjian stage classification for 7 teeth
-- 🎯 **Stage Classification** — Interactive tooth-by-tooth review with AI confidence scores
-- 📊 **Results Dashboard** — Estimated dental age, maturity score, age range, and clinical insights
-- 🔐 **Authentication** — Supabase Auth with email/password, password reset via deep linking
-- 📶 **Offline Support** — Queues actions locally and syncs when network is available
-- ☁️ **Cloud Storage** — OPG images stored in Supabase Storage (`opg-images` bucket)
+An enterprise-grade dental age estimation platform built with **React Native (Expo SDK 55)** and **Supabase**. DentAge leverages advanced AI to provide forensic-standard age estimation using Demirjian's stages of development for mandibular teeth.
 
 ---
 
-## 📱 Screens
+## ✨ Enterprise Features
+
+- 🏢 **Multi-Tenant Architecture** — Support for Organizations, Clinics, and tiered roles (`Enterprise Admin`, `Clinic Admin`, `Practitioner`).
+- 🛡️ **AI Clinical Guardrails** — Automated image relevance check rejects non-dental radiographs (cars, faces, etc.) to ensure diagnostic integrity.
+- 🤖 **Automated Diagnostic Lab** — Real-time AI staging of all 7 mandibular left teeth (ISO 31-37) with automated clinical morphology notes.
+- 📸 **Unified Clinical Upload** — Seamlessly capture physical radiographs via camera or upload digital OPGs directly from the patient selection flow.
+- 📊 **Clinical Intelligence** — Population maturity trends, accuracy tracking, and professional PDF report generation.
+- 🌍 **Multi-Language Support** — Fully localized for English, Hindi, Telugu, Tamil, and Kannada using `i18next`.
+- 🔐 **Clinical Security** — Role-based access control (RBAC), Row-Level Security (RLS), and full audit trails.
+
+---
+
+## 📱 Clinical Screens
 
 | Screen | File | Description |
 |--------|------|-------------|
-| Login | `screens/LoginScreen.js` | Email/password login with "Trust device" option |
-| Sign Up | `screens/SignUpScreen.js` | Professional registration with license ID |
-| Forgot Password | `screens/ForgotPasswordScreen.js` | Password reset via email |
-| Home (Dashboard) | `screens/HomeScreen.js` | Hero stats, recent assessments, FAB, bottom nav |
-| X-Ray Analysis | `screens/XRayAnalysisScreen.js` | Radiograph viewport with AI overlay & tooth detection |
-| Stage Classification | `screens/StageClassificationScreen.js` | Demirjian stage picker (A–H) with AI confidence |
-| Results Dashboard | `screens/ResultsDashboardScreen.js` | Age comparison, maturity score, clinical insights |
-| Settings | `screens/SettingsScreen.js` | Profile, clinical preferences, app settings |
-| Change Password | `screens/ChangePasswordScreen.js` | Update account password |
-| Delete Account | `screens/DeleteAccountScreen.js` | Account deletion flow |
+| **Login** | `screens/LoginScreen.tsx` | Secure clinical login with "Clinical-Grade Encryption" |
+| **Enterprise Dashboard** | `screens/EnterpriseAdminDashboard.tsx` | Global stats, clinic management, and audit trails |
+| **Manage Clinics** | `screens/ManageClinicsScreen.tsx` | Facility lifecycle and staff allocation |
+| **Patient Selection** | `screens/PatientSelectionScreen.tsx` | Unified patient registration and OPG upload flow |
+| **AI Analysis** | `screens/AnalysisView.tsx` | High-contrast viewport with automated "Laser Scan" animation |
+| **Diagnostic Lab** | `screens/StageClassificationScreen.tsx` | Automated AI staging review with visual standard references |
+| **Results** | `screens/ResultsDashboardScreen.tsx` | Maturity scores, age variance charts, and PDF export |
+| **Settings** | `screens/SettingsScreen.tsx` | Clinical preferences and multi-language toggles |
 
 ---
 
 ## 🧭 Navigation Flow
 
 ```
-Login → Home
-Login → SignUp → Home
-Login → ForgotPassword → Login
-Home → XRayAnalysis → StageClassification → Results
-Home → Settings → ChangePassword
-Home → Settings → DeleteAccount
+Login → Home (Practitioner Dashboard)
+Login → EnterpriseAdmin (Admin Dashboard)
+Home → PatientSelection → [Image Picker] → AI Analysis → Diagnostic Lab → Results
+EnterpriseAdmin → ManageClinics → ManagePractitioners
+Settings → ChangePassword / Language Selection
 ```
 
 ---
@@ -50,7 +47,7 @@ Home → Settings → DeleteAccount
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
+- [Node.js](https://nodejs.org/) (v20+)
 - [Expo CLI](https://docs.expo.dev/get-started/installation/)
 - A [Supabase](https://supabase.com/) project
 - A [Google AI (Gemini)](https://aistudio.google.com/apikey) API key
@@ -58,8 +55,8 @@ Home → Settings → DeleteAccount
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/codewithvis/OPG-Age-Detector.git
-cd OPG-Age-Detector
+git clone https://github.com/codewithvis/DentAge.git
+cd DentAge
 npm install
 ```
 
@@ -70,36 +67,29 @@ Create a `.env` file in the project root:
 ```env
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+GEMINI_API_KEY=your-gemini-api-key
 ```
-
-> Get these from your Supabase dashboard → **Settings → API**.
 
 ### 3. Supabase Setup
 
-#### Database & Storage
+#### Enterprise Schema
 
-Run the SQL in `supabase-setup.sql` in your Supabase SQL Editor. This creates:
-
-- **`patients`** table — Patient records (name, DOB, notes)
-- **`analyses`** table — AI analysis results (dental age, confidence, stages, etc.)
-- **`opg-images`** storage bucket — For uploaded radiograph images
-- **RLS policies** — Row-level security for authenticated users
+Run the SQL in **`supabase-enterprise-setup.sql`** in your Supabase SQL Editor. This initializes the multi-tenant architecture:
+- **`organizations`** & **`clinics`** tables
+- **`profiles`** with RBAC columns (`role`, `org_id`, `clinic_id`)
+- **`analyses`** with clinic-scoped RLS policies
+- **`population_maturity_trends`** clinical view
 
 #### Edge Functions
 
-Deploy the Supabase Edge Functions:
+Deploy the Advanced AI Analysis pipeline:
 
 ```bash
-supabase functions deploy radiograph_upload_and_analyze
+supabase functions deploy advanced-ai-analyze
 supabase functions deploy calculate-age
-supabase functions deploy save-analysis
-supabase functions deploy manage-patients
-supabase functions deploy get-analyses
 ```
 
 #### Edge Function Secrets
-
-Set the Gemini API key as a secret for the edge functions:
 
 ```bash
 supabase secrets set GEMINI_API_KEY=your-gemini-api-key
@@ -111,121 +101,27 @@ supabase secrets set GEMINI_API_KEY=your-gemini-api-key
 npx expo start
 ```
 
-Scan the QR code with **Expo Go** on your device, or press `a` to open in an Android emulator.
+---
+
+## 🏗️ Technical Stack
+
+- **Framework:** React Native (Expo SDK 55)
+- **Language:** TypeScript (Strict Mode)
+- **Backend:** Supabase (Auth, PostgreSQL, Storage, Edge Functions)
+- **AI Engine:** Gemini 1.5 Flash (via Google Generative AI)
+- **State:** Zustand (Atomic clinical state)
+- **Localization:** i18next & react-i18next
+- **Animations:** React Native Reanimated (Diagnostic Scan effects)
+- **Reports:** Expo Print & Sharing (PDF Generation)
 
 ---
 
-## 🏗️ Project Structure
+## 🔬 AI Diagnostic Logic
 
-```
-DentAge/
-├── App.js                    # Navigation setup & deep linking
-├── theme.js                  # Design tokens (colors, spacing, shadows)
-├── api/
-│   ├── analyze.js            # Client-side API calls (analyzeOPG, finalizeAnalysis)
-│   └── profile.ts            # Profile API
-├── screens/                  # All app screens (see table above)
-├── components/               # Reusable UI components
-├── services/
-│   └── supabase.ts           # Supabase client, offline queue & sync
-├── provider/
-│   ├── AuthProvider.js       # Authentication context
-│   └── QueryProvider.js      # React Query provider
-├── constants/
-│   └── layout.js             # Responsive layout constants
-├── utils/
-│   └── responsive.js         # Screen scaling utilities
-├── supabase/
-│   └── functions/            # Supabase Edge Functions (Deno)
-│       ├── radiograph_upload_and_analyze/  # Main analysis pipeline
-│       ├── calculate-age/                  # Age calculation from AI stages
-│       ├── save-analysis/                  # Persist analysis to DB
-│       ├── manage-patients/                # Patient CRUD
-│       └── get-analyses/                   # Fetch analysis history
-├── supabase-setup.sql        # Database schema & RLS policies
-└── package.json
-```
-
----
-
-## 🔬 How It Works
-
-1. **Upload** — User picks/captures an OPG radiograph from their device
-2. **Edge Function** — Image is sent to `radiograph_upload_and_analyze`, which:
-   - Validates the request and authenticates the user
-   - Uploads the image to Supabase Storage (`opg-images` bucket)
-   - Sends the image to **Gemini 1.5 Flash** with a dental radiology prompt
-   - Parses and validates the AI response (Demirjian stages A–H for 7 teeth)
-   - Stores the analysis result in the `analyses` table
-3. **Review** — User reviews tooth-by-tooth stage classifications
-4. **Results** — App displays estimated dental age, confidence score, maturity score, and age range
-
----
-
-## 🗄️ Database Schema
-
-### `patients`
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Auto-generated |
-| `name` | TEXT | Patient name |
-| `date_of_birth` | DATE | Date of birth |
-| `notes` | TEXT | Clinical notes |
-| `created_at` | TIMESTAMPTZ | Record creation time |
-| `updated_at` | TIMESTAMPTZ | Last update time |
-
-### `analyses`
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Auto-generated |
-| `case_id` | TEXT | Unique case identifier |
-| `patient_id` | UUID (FK) | References `patients.id` |
-| `image_url` | TEXT | Public URL of uploaded OPG |
-| `dental_age` | NUMERIC | AI-estimated dental age (years) |
-| `ai_confidence` | NUMERIC | Overall confidence (0.0–1.0) |
-| `maturity_score` | NUMERIC | Dental maturity percentage |
-| `age_range` | TEXT | Estimated range (e.g. "8-10") |
-| `tooth_development_stage` | TEXT | JSON of per-tooth Demirjian stages |
-| `analysis` | TEXT | Summary description |
-| `user_id` | UUID (FK) | References `auth.users.id` |
-| `created_at` | TIMESTAMPTZ | Analysis timestamp |
-
----
-
-## 🎨 Design Tokens
-
-All colors, spacing, border radii, and shadows are defined in `theme.js`. Modify there to retheme the entire app.
-
----
-
-## 📦 Key Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `expo` (~55) | React Native framework |
-| `@supabase/supabase-js` | Database, auth, storage, edge functions |
-| `@react-navigation/native` | Navigation |
-| `@tanstack/react-query` | Server state management |
-| `expo-image-picker` | Camera/gallery image selection |
-| `expo-file-system` | Local file I/O (base64 encoding) |
-| `expo-print` / `expo-sharing` | PDF report generation & sharing |
-| `react-native-toast-message` | In-app notifications |
-
----
-
-## 🤝 Contributing
-
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -m "Add your feature"`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
-
-> **Note for collaborators:** If git asks for credentials on push, run:
-> ```bash
-> git config --global credential.helper manager
-> ```
-> Then use your GitHub username + a [Personal Access Token](https://github.com/settings/tokens) (not your password).
+1. **Relevance Check** — AI validates if the image is a dental radiograph.
+2. **Detection** — AI classifies Demirjian stages A-H for ISO teeth 31-37.
+3. **Normalization** — `calculate-age` function maps AI output to clinical maturity scores.
+4. **Verification** — Practitioners review automated findings against built-in visual standards before finalization.
 
 ---
 
@@ -237,5 +133,5 @@ ISC
 
 ## 🔗 Links
 
-- **Repository:** [github.com/codewithvis/OPG-Age-Detector](https://github.com/codewithvis/OPG-Age-Detector)
-- **Issues:** [github.com/codewithvis/OPG-Age-Detector/issues](https://github.com/codewithvis/OPG-Age-Detector/issues)
+- **Repository:** [github.com/codewithvis/DentAge](https://github.com/codewithvis/DentAge)
+- **Issues:** [github.com/codewithvis/DentAge/issues](https://github.com/codewithvis/DentAge/issues)

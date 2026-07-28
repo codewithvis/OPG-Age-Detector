@@ -1,39 +1,36 @@
-# Implementation Plan - AI Image Validation & Safety Guardrails
+# Implementation Plan - README Update for Enterprise & AI Guardrails
 
-The goal is to implement strict validation in the AI analysis pipeline to ensure the system only processes relevant dental radiographs (OPG, Panoramic, Periapical) and rejects unrelated images.
+The goal is to bring the `README.md` up to date with the latest project architecture, including the Enterprise multi-tenant model, AI safety guardrails, and automated diagnostic lab.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Safety Guardrail**: I am adding a "Relevance Check" as the first step of the AI analysis. If the AI detects that the uploaded image is not a dental radiograph, it will return a specific `INVALID_IMAGE_TYPE` error.
->
-> **User Experience**: The app will display a "Clinical Rejection" screen instead of results if an invalid image (like a car, person, or non-clinical document) is uploaded.
+> **Technical Stack Update**: I will explicitly mention the shift to **TypeScript** and the use of **Zustand** for state management and **i18next** for multi-language clinical support.
 
 ## Proposed Changes
 
-### 1. AI Edge Function (Validation Logic)
-- **[MODIFY]** `supabase/functions/advanced-ai-analyze/index.ts`:
-    - Update `GEMINI_SYSTEM_PROMPT` to include a required `is_valid_radiograph` check.
-    - If `is_valid_radiograph` is false, the AI must return an error object instead of tooth classifications.
-    - Explicitly instruct the AI to reject non-dental images (e.g., landscapes, animals, general objects).
+### 1. Feature Highlighting
+- Add **Enterprise Multi-Tenancy**: Organizations, Clinics, and Role-based access control (Admin/Practitioner).
+- Add **AI Clinical Guardrails**: Automatic rejection of non-dental images to prevent hallucinated diagnostics.
+- Add **Automated Diagnostic Lab**: AI-driven tooth staging with clinical verification workflow.
 
-### 2. Frontend Error Handling
-- **[MODIFY]** `screens/AnalysisView.tsx`:
-    - Update the analysis state to handle the `INVALID_IMAGE_TYPE` case.
-    - Show a high-contrast "Clinical Rejection" message in the status area.
-    - Disable the "Review Results" button if the image is rejected.
+### 2. Documentation of New Screens
+- Update the screen table to include:
+    - **Enterprise Dashboard**
+    - **Clinic & Practitioner Management**
+    - **Patient Selection (with unified upload)**
+    - **Diagnostic Lab (Automated)**
 
-### 3. API Bridge
-- **[MODIFY]** `api/analyze.ts`:
-    - Ensure the rejection error is correctly propagated to the UI.
+### 3. Setup & Deployment
+- Update Supabase setup instructions to reference `supabase-enterprise-setup.sql`.
+- Clarify environment variables for the proprietary Edge AI fallback and Gemini 1.5 Flash.
+
+### 4. Project Structure & Tech Details
+- Correct file extensions to `.tsx` and `.ts`.
+- Update the directory map to include the new `provider/`, `services/`, and `store/` organization.
 
 ## Verification Plan
 
-### Automated Tests
-- **Backend Simulation**: Test the edge function with a "cat photo" (mock) and verify it returns the correct rejection JSON.
-- **Type Check**: `npx tsc --noEmit`.
-
 ### Manual Verification
-1.  **Positive Test**: Upload a real OPG image. Verify analysis proceeds to the Lab.
-2.  **Negative Test**: Upload a completely unrelated image (e.g., a photo of a room).
-3.  **Verification**: Confirm the app shows "Analysis Failed: Invalid Clinical Image" and prevents proceeding to Stage Classification.
+- Verify all links and file paths in the README correctly reflect the current repository state.
+- Ensure the "Navigation Flow" accurately represents the enterprise onboarding and clinical analysis path.

@@ -16,7 +16,11 @@
       "expo-notifications"
     ],
     "android": {
-      "permissions": [],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "package": "com.anonymous.dentage",
       "versionCode": 1,
       "adaptiveIcon": {
