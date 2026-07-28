@@ -1,7 +1,9 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "strict": true,
     "jsx": "react-native",
+    "module": "esnext",
     "baseUrl": "./",
     "paths": {
       "@/*": [
@@ -9,5 +11,5 @@
       ]
     }
   },
-  "exclude": ["node_modules", "babel.config.js", "metro.config.js", "jest.config.js", "android", "ios"]
+  "exclude": ["node_modules", "babel.config.js", "metro.config.js", "jest.config.js", "android", "ios", "supabase/functions"]
 }

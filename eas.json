@@ -1,6 +1,6 @@
 {
   "cli": {
-    "appVersionSource": "remote" 
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -8,15 +8,13 @@
       "distribution": "internal",
       "channel": "development",
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
+        "buildType": "apk"
       }
     },
     "production": {
       "channel": "production",
       "android": {
-        "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease"
+        "buildType": "app-bundle"
       },
       "ios": {
         "buildConfiguration": "Release"
@@ -31,19 +29,6 @@
       },
       "ios": {
         "simulator": true
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./google-service-account.json",
-        "track": "internal"
-      },
-      "ios": {
-        "appleId": "your-apple-id@example.com",
-        "ascAppId": "your-app-store-connect-app-id",
-        "appleTeamId": "your-apple-team-id"
       }
     }
   }

@@ -98,11 +98,12 @@ export const syncOfflineData = async () => {
                         const aiData = await analyzeOPG(base64Data, user.id);
                         console.log("Offline AI Analysis Successful:", aiData);
                     } catch (aiErr) {
-                        console.error('Offline AI analysis failed:', aiErr.message || aiErr);
+                        const err = aiErr as any;
+                        console.error('Offline AI analysis failed:', err.message || err);
                         
                         // If it's an authorization/JWT error or a 404 not found, it is unrecoverable.
                         // We must discard the task so it doesn't infinitely loop on every startup.
-                        if (aiErr.message?.includes('Invalid JWT') || aiErr.message?.includes('unauthenticated') || aiErr.message?.includes('401') || aiErr.message?.includes('404') || aiErr.message?.includes('Not Found')) {
+                        if (err.message?.includes('Invalid JWT') || err.message?.includes('unauthenticated') || err.message?.includes('401') || err.message?.includes('404') || err.message?.includes('Not Found')) {
                             console.warn(`Offline sync: discarding action ${key} due to unrecoverable error (e.g. 401 or 404).`);
                             await AsyncStorage.removeItem(key);
                             continue;

@@ -18,6 +18,7 @@
     "android": {
       "permissions": [],
       "package": "com.anonymous.dentage",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/app-icon.png",
         "backgroundColor": "#ffffff"
@@ -25,6 +26,11 @@
     },
     "web": {
       "favicon": "./assets/icons/app-icon.png"
+    },
+    "ios": {
+      "bundleIdentifier": "com.codewithvis.dentage",
+      "buildNumber": "1.0.0",
+      "supportsTablet": true
     },
     "extra": {
       "eas": {
@@ -37,7 +43,6 @@
     },
     "updates": {
       "url": "https://u.expo.dev/f2d09779-e0ed-4188-9a7f-055f60de2000"
-    },
-    "ios": {}
+    }
   }
 }
