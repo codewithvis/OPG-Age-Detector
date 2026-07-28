@@ -34,15 +34,12 @@
     },
     "extra": {
       "eas": {
-        "projectId": "f2d09779-e0ed-4188-9a7f-055f60de2000"
+        "projectId": "06f1c928-0ca2-4927-9017-da98a44d3809"
       }
     },
-    "owner": "helpdeskomr",
+    "owner": "helpdeskcalm",
     "runtimeVersion": {
       "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/f2d09779-e0ed-4188-9a7f-055f60de2000"
     }
   }
 }

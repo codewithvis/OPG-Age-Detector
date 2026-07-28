@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,7 +6,7 @@ const corsHeaders = {
 };
 
 const GEMINI_SYSTEM_PROMPT = `You are a dental radiology AI specialized in forensic and clinical age estimation.
-Analyze the provided radiograph (OPG, Panoramic, or Periapical) and determine the Demirjian development stages for mandibular teeth.
+Analyze the provided radiograph (OPG, Panoramic, or Periapical) and determine the Demirjian development stages for mandibular teeth (ISO 31-37).
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON object:
@@ -49,7 +48,12 @@ serve(async (req: Request) => {
 
         if (response.ok) {
           const aiResult = await response.json();
-          return new Response(JSON.stringify({ data: aiResult }), {
+          return new Response(JSON.stringify({
+            data: {
+              ai_result: aiResult,
+              analysis: aiResult
+            }
+          }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         } else {
@@ -61,7 +65,7 @@ serve(async (req: Request) => {
       }
     }
 
-    // 2. Fallback to Gemini 2.5 Flash
+    // 2. Fallback to Gemini 1.5 Flash
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY not configured. Please set it in Supabase Secrets.");
@@ -85,7 +89,8 @@ serve(async (req: Request) => {
       }
     };
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    // Use a valid model name: gemini-1.5-flash
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     const geminiRes = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -119,7 +124,13 @@ serve(async (req: Request) => {
       throw new Error("Failed to parse JSON from AI response.");
     }
 
-    return new Response(JSON.stringify({ data: parsedResult }), {
+    // Wrap in data.ai_result to match the expected format in api/analyze.ts
+    return new Response(JSON.stringify({
+      data: {
+        ai_result: parsedResult,
+        analysis: parsedResult
+      }
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

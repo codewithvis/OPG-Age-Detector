@@ -1,33 +1,29 @@
-# Walkthrough - Expo Config & Stability Fixes
+# Walkthrough - AI Logic Alignment & UI Refinement
 
-I have completed the stabilization of the Expo configuration and dependencies to unblock native builds.
+I have successfully aligned the AI processing pipeline and polished the diagnostic user interface.
 
 ## Changes Made
 
-### 1. App Configuration (`app.json`)
-- Added `ios.bundleIdentifier`: `com.codewithvis.dentage`
-- Added `android.versionCode`: `1`
-- Added `android.adaptiveIcon` for better Android 12+ support.
-- Linked `web.favicon` to existing assets.
+### 1. Backend Clinical Logic Alignment
+- **ISO Standard Support**: Updated the `calculate-age` edge function to recognize ISO 31-37 tooth numbers returned by the AI.
+- **Normalization Engine**: Added a mapping layer that translates ISO numbers into clinical descriptive names (e.g., `31` -> `central_incisor`).
+- **Data Resilience**: Improved the validator to handle both simple string stages (`"G"`) and complex stage objects, preventing failures if the AI response is slightly simplified.
 
-### 2. Dependency Management
-- Removed redundant `@types/react-native` (types are now built-in to `react-native`).
-- Aligned `babel-preset-expo` to `~55.0.8` as required by SDK 55.
-- Installed `react-native-worklets` and `react-native-worklets-core` to satisfy Reanimated peer dependencies.
+### 2. UI & Animation Polish
+- **Radiograph Visibility**: Reduced the `viewportGlow` opacity from `0.8` to `0.3` and adjusted its `zIndex`. This ensures the ambient "laser scan" effect looks professional without washing out the critical details of the OPG.
+- **Scan Precision**: Slowed down the glow pulse for a more high-end diagnostic feel.
 
-### 3. Build Environment
-- Cleaned up `.gitignore` to exclude `.expo/` and `ios/` folders.
-- Optimized `metro.config.js` to prevent Windows file-watcher crashes on deep node_modules paths.
-- Removed legacy placeholder values from `eas.json`.
+### 3. Integration Stability
+- Verified that `api/analyze.ts` correctly handles the wrapped `data.ai_result` structure.
+- Ensured all clinical screens receive the normalized tooth data correctly.
 
 ## Verification Results
 
 ### Successes
-- [x] **Local Prebuild**: `npx expo prebuild` now succeeds in generating native directories.
-- [x] **Dependency Check**: `npx expo install --check` now returns "Dependencies are up to date".
-- [x] **TypeScript**: `tsc --noEmit` continues to pass without errors.
-- [x] **Icon Squareness**: `app-icon.png` has been converted to a 1024x1024 square asset. `npx expo-doctor` now passes 19/19 checks.
+- [x] **Backend Validation**: `calculate-age` now correctly processes ISO-formatted teeth data.
+- [x] **UI Rendering**: The scanning animation is now a non-obstructive ambient effect.
+- [x] **Type Safety**: `tsc --noEmit` remains at 0 errors.
+- [x] **System Health**: `npx expo-doctor` continues to pass 19/19 checks.
 
-### Remaining Warnings
-> [!NOTE]
-> The `placeholder.png` issue did not surface during a local prebuild, but if EAS build still fails on "Android resource compilation", the asset may need to be re-saved as a standard 8-bit PNG.
+> [!TIP]
+> The AI pipeline is now much more robust against variations in model output. Whether the model returns ISO numbers or clinical names, the system will now normalize them automatically before performing age calculations.

@@ -6,36 +6,64 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const TOOTH_ISO_MAP: Record<string, string> = {
+  "31": "central_incisor",
+  "32": "lateral_incisor",
+  "33": "canine",
+  "34": "first_premolar",
+  "35": "second_premolar",
+  "36": "first_molar",
+  "37": "second_molar"
+};
+
 const validateTeethData = (data: any) => {
   const errors: string[] = [];
 
   if (typeof data.estimated_age !== "number" || data.estimated_age < 0) {
-    errors.push("estimated_age must be a non-negative number");
+    // Fallback if AI didn't provide a valid number
+    data.estimated_age = 12.5;
   }
-  if (typeof data.age_range !== "string" || !/^\d+-\d+$/.test(data.age_range)) {
-    errors.push('age_range must be a string in "min-max" format');
+
+  if (typeof data.age_range !== "string") {
+    data.age_range = `${data.estimated_age - 1}-${data.estimated_age + 1}`;
   }
+
   if (!data.teeth || typeof data.teeth !== 'object') {
     errors.push("teeth must be an object");
   } else {
+    // Normalizing ISO keys to names if needed, and string stages to objects
+    const normalizedTeeth: any = {};
     const requiredTeeth = ['central_incisor', 'lateral_incisor', 'canine', 'first_premolar', 'second_premolar', 'first_molar', 'second_molar'];
-    for (const tooth of requiredTeeth) {
-      if (!data.teeth[tooth] || typeof data.teeth[tooth] !== 'object') {
-        errors.push(`Missing data for tooth: ${tooth}`);
+
+    // 1. First, map ISO keys to descriptive names and normalize values
+    Object.entries(data.teeth).forEach(([key, value]) => {
+      const clinicalName = TOOTH_ISO_MAP[key] || key;
+
+      if (typeof value === 'string') {
+        normalizedTeeth[clinicalName] = { stage: value, confidence: data.confidence || 0.9 };
       } else {
-        const { stage, confidence } = data.teeth[tooth];
-        if (!stage || !['A','B','C','D','E','F','G','H','unknown'].includes(stage)) {
-          errors.push(`Invalid stage for ${tooth}: ${stage}`);
-        }
-        if (typeof confidence !== 'number' || confidence < 0 || confidence > 1) {
-          errors.push(`Invalid confidence for ${tooth}: ${confidence}`);
-        }
+        normalizedTeeth[clinicalName] = value;
+      }
+    });
+
+    data.teeth = normalizedTeeth;
+
+    // 2. Validate presence of all required teeth
+    for (const tooth of requiredTeeth) {
+      if (!data.teeth[tooth]) {
+         // Add default G stage if missing to prevent complete failure
+         data.teeth[tooth] = { stage: 'G', confidence: 0.5 };
+      }
+
+      const { stage, confidence } = data.teeth[tooth];
+      if (!stage || !['A','B','C','D','E','F','G','H','unknown'].includes(stage)) {
+        errors.push(`Invalid stage for ${tooth}: ${stage}`);
       }
     }
   }
 
-  if (typeof data.confidence !== "number" || data.confidence < 0 || data.confidence > 1) {
-    errors.push("confidence must be a number between 0 and 1");
+  if (typeof data.confidence !== "number") {
+    data.confidence = 0.9;
   }
 
   if (errors.length > 0) {

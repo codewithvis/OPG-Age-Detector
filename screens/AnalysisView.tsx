@@ -46,8 +46,8 @@ export const AnalysisView = ({ route, navigation }: any) => {
     // Laser Glow Animation
     glowOpacity.value = withRepeat(
       withSequence(
-        withTiming(0.8, { duration: 1000 }),
-        withTiming(0.2, { duration: 1000 })
+        withTiming(0.3, { duration: 1500 }),
+        withTiming(0.1, { duration: 1500 })
       ),
       -1,
       true
