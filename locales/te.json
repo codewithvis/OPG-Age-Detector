@@ -1,0 +1,18 @@
+{
+  "common": {
+    "welcome": "స్వాగతం",
+    "settings": "సెట్టింగులు",
+    "dashboard": "డ్యాష్‌బోర్డ్",
+    "scanner": "స్కానర్",
+    "analysis": "విశ్లేషణ",
+    "loading": "లోడ్ అవుతోంది...",
+    "save": "సేవ్ చేయండి",
+    "cancel": "రద్దు చేయండి"
+  },
+  "clinical": {
+    "start_analysis": "కొత్త విశ్లేషణ ప్రారంభించండి",
+    "select_patient": "రోగిని ఎంచుకోండి",
+    "register_patient": "కొత్త రోగిని నమోదు చేయండి",
+    "estimated_age": "అంచనా వేసిన దంత వయస్సు"
+  }
+}

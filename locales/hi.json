@@ -1,0 +1,20 @@
+{
+  "common": {
+    "welcome": "स्वागत है",
+    "settings": "सेटिंग्स",
+    "dashboard": "डैशबोर्ड",
+    "scanner": "स्कैनर",
+    "analysis": "विश्लेषण",
+    "loading": "लोड हो रहा है...",
+    "save": "सहेजें",
+    "cancel": "रद्द करें"
+  },
+  "clinical": {
+    "start_analysis": "नया विश्लेषण शुरू करें",
+    "select_patient": "मरीज चुनें",
+    "register_patient": "नया मरीज पंजीकृत करें",
+    "estimated_age": "अनुमानित दंत आयु",
+    "maturity": "परिपक्वता",
+    "confidence": "एआई विश्वास"
+  }
+}

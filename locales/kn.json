@@ -1,0 +1,18 @@
+{
+  "common": {
+    "welcome": "ಸ್ವಾಗತ",
+    "settings": "ಸೇಟಿಂಗ್ಸ್",
+    "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "scanner": "ಸ್ಕ್ಯಾನರ್",
+    "analysis": "ವಿಶ್ಲೇಷಣೆ",
+    "loading": "ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
+    "save": "ಉಳಿಸಿ",
+    "cancel": "ರದ್ದುಮಾಡಿ"
+  },
+  "clinical": {
+    "start_analysis": "ಹೊಸ ವಿಶ್ಲೇಷಣೆ ಪ್ರಾರಂಭಿಸಿ",
+    "select_patient": "ರೋಗಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+    "register_patient": "ಹೊಸ ರೋಗಿಯನ್ನು ನೋಂದಾಯಿಸಿ",
+    "estimated_age": "ಅಂದಾಜು ದಂತ ವಯಸ್ಸು"
+  }
+}

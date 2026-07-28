@@ -1,0 +1,18 @@
+{
+  "common": {
+    "welcome": "வரவேற்பு",
+    "settings": "அமைப்புகள்",
+    "dashboard": "டாஷ்போர்டு",
+    "scanner": "ஸ்கேனர்",
+    "analysis": "பகுப்பாய்வு",
+    "loading": "ஏற்றுகிறது...",
+    "save": "சேமி",
+    "cancel": "ரத்துசெய்"
+  },
+  "clinical": {
+    "start_analysis": "புதிய பகுப்பாய்வைத் தொடங்கு",
+    "select_patient": "நோயாளி தேர்ந்தெடுக்கவும்",
+    "register_patient": "புதிய நோயாளியைப் பதிவுசெய்க",
+    "estimated_age": "மதிப்பிடப்பட்ட பல் வயது"
+  }
+}

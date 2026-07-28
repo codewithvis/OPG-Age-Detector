@@ -1,0 +1,26 @@
+{
+  "common": {
+    "welcome": "Welcome Back",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "scanner": "Scanner",
+    "analysis": "Analysis",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "clinical": {
+    "start_analysis": "Start New Analysis",
+    "select_patient": "Select Patient",
+    "register_patient": "Register New Patient",
+    "estimated_age": "Estimated Dental Age",
+    "maturity": "Maturity",
+    "confidence": "AI Confidence"
+  },
+  "enterprise": {
+    "admin_panel": "Enterprise Admin",
+    "clinic_chains": "Clinic Chains",
+    "total_cases": "Total Cases",
+    "accuracy_global": "Global Accuracy"
+  }
+}
