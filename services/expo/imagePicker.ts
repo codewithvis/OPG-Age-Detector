@@ -29,3 +29,31 @@ export const openImagePicker = async (): Promise<string | null> => {
     return null;
   }
 };
+
+/**
+ * Service to capture a new photo using the device camera.
+ */
+export const openCamera = async (): Promise<string | null> => {
+  try {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      alert("Camera access is required to take photos of radiographs.");
+      return null;
+    }
+
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      return result.assets[0].uri;
+    }
+
+    return null;
+  } catch (error) {
+    console.warn("Error capturing photo:", error);
+    return null;
+  }
+};

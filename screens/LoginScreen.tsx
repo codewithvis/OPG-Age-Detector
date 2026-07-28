@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   TextInput,
@@ -10,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography, radius, shadows } from '../theme';
 import { Typography } from '../components/common/Typography';
 import { Button } from '../components/common/Button';

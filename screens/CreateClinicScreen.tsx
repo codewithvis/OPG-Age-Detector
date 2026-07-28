@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography, radius } from '../theme';
 import { Typography } from '../components/common/Typography';
 import { Card } from '../components/common/Card';

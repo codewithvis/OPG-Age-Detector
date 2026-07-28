@@ -3,13 +3,13 @@ import {
   View,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography, radius } from '../theme';
 import { Typography } from '../components/common/Typography';
 import { Card } from '../components/common/Card';

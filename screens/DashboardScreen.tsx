@@ -4,10 +4,10 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography, radius } from '../theme';
 import { Typography } from '../components/common/Typography';
 import { Card } from '../components/common/Card';
@@ -62,7 +62,7 @@ export const DashboardScreen = ({ navigation }: any) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" />
 
       {/* Header */}

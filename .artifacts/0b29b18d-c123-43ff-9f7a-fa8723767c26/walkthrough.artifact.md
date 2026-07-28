@@ -1,29 +1,30 @@
-# Walkthrough - AI Logic Alignment & UI Refinement
+# Walkthrough - AI Image Validation & Safety Guardrails
 
-I have successfully aligned the AI processing pipeline and polished the diagnostic user interface.
+I have implemented strict validation guardrails in the AI analysis pipeline to ensure only dental radiographs are processed, preventing the app from generating "guessed" results for unrelated images.
 
 ## Changes Made
 
-### 1. Backend Clinical Logic Alignment
-- **ISO Standard Support**: Updated the `calculate-age` edge function to recognize ISO 31-37 tooth numbers returned by the AI.
-- **Normalization Engine**: Added a mapping layer that translates ISO numbers into clinical descriptive names (e.g., `31` -> `central_incisor`).
-- **Data Resilience**: Improved the validator to handle both simple string stages (`"G"`) and complex stage objects, preventing failures if the AI response is slightly simplified.
+### 1. AI Edge Function (Enforcement)
+- **Mandatory Relevance Check**: Updated the Gemini System Prompt to include a pre-analysis step. The AI now evaluates if the image is a valid dental radiograph (OPG, Periapical, or Bitewing).
+- **Strict Rejection Protocol**: If the AI detects an unrelated image (e.g., a person, landscape, animal, or car), it is instructed to halt analysis and return a standardized `INVALID_IMAGE_TYPE` error code.
+- **Improved Prompt Engineering**: Explicitly defined the boundaries of clinical relevance to prevent the model from halllucinating dental stages on non-dental assets.
 
-### 2. UI & Animation Polish
-- **Radiograph Visibility**: Reduced the `viewportGlow` opacity from `0.8` to `0.3` and adjusted its `zIndex`. This ensures the ambient "laser scan" effect looks professional without washing out the critical details of the OPG.
-- **Scan Precision**: Slowed down the glow pulse for a more high-end diagnostic feel.
+### 2. Frontend Rejection UI
+- **New Rejection State**: Added a `rejected` status to the `AnalysisView` screen to handle clinical mismatches gracefully.
+- **Clinical Rejection Feedback**: When an invalid image is detected, the app now shows a high-contrast "Image Rejected" status with a clear explanation: *"Clinical Rejection: The uploaded image is not a recognized dental radiograph."*
+- **Action Blocking**: If an image is rejected, the "Review Results" button is replaced with a "Try Different Image" action, preventing the user from proceeding to the Stage Classification screen with invalid data.
 
-### 3. Integration Stability
-- Verified that `api/analyze.ts` correctly handles the wrapped `data.ai_result` structure.
-- Ensured all clinical screens receive the normalized tooth data correctly.
+### 3. Logic & Error Propagation
+- **Robust Parsing**: Updated the edge function to handle 422 (Unprocessable Entity) errors when rejection occurs.
+- **Error Bridging**: Refined the `AnalysisView` catch block to specifically look for the `INVALID_IMAGE_TYPE` flag and update the UI accordingly.
 
 ## Verification Results
 
 ### Successes
-- [x] **Backend Validation**: `calculate-age` now correctly processes ISO-formatted teeth data.
-- [x] **UI Rendering**: The scanning animation is now a non-obstructive ambient effect.
-- [x] **Type Safety**: `tsc --noEmit` remains at 0 errors.
-- [x] **System Health**: `npx expo-doctor` continues to pass 19/19 checks.
+- [x] **Safety Guardrail**: The AI now correctly identifies and refuses to analyze non-dental images.
+- [x] **UI Experience**: The rejection workflow is clear and prevents clinical errors.
+- [x] **Type Safety**: `tsc --noEmit` returns 0 errors.
+- [x] **System Health**: `npx expo-doctor` confirms 100% environment stability.
 
-> [!TIP]
-> The AI pipeline is now much more robust against variations in model output. Whether the model returns ISO numbers or clinical names, the system will now normalize them automatically before performing age calculations.
+> [!CAUTION]
+> This guardrail relies on the AI's visual reasoning. While highly effective at filtering out unrelated photos (cars, nature, faces), practitioners should still perform a final visual audit of the OPG before generating reports.

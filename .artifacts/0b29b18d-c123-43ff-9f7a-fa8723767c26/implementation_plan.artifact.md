@@ -1,38 +1,39 @@
-# Implementation Plan - AI Logic Alignment & UI Refinement
+# Implementation Plan - AI Image Validation & Safety Guardrails
 
-The goal is to align the data structures between the AI analysis engine and the clinical calculation engine, while polishing the diagnostic UI for better clarity.
+The goal is to implement strict validation in the AI analysis pipeline to ensure the system only processes relevant dental radiographs (OPG, Panoramic, Periapical) and rejects unrelated images.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Data Standardization**: I am standardizing the AI pipeline to use **ISO 31-37** tooth numbering as the primary key. The calculation engine will be updated to map these to clinical names internally.
+> **Safety Guardrail**: I am adding a "Relevance Check" as the first step of the AI analysis. If the AI detects that the uploaded image is not a dental radiograph, it will return a specific `INVALID_IMAGE_TYPE` error.
 >
-> **UI Visuals**: The "Laser Glow" effect is being toned down to ensure the radiograph remains the focal point during analysis.
+> **User Experience**: The app will display a "Clinical Rejection" screen instead of results if an invalid image (like a car, person, or non-clinical document) is uploaded.
 
 ## Proposed Changes
 
-### 1. AI Backend Alignment
-- **[MODIFY]** `supabase/functions/calculate-age/index.ts`:
-    - Update `validateTeethData` to accept ISO number keys (`31`-`37`).
-    - Support both simple string stages (`"G"`) and nested objects (`{ stage: "G", confidence: 0.9 }`).
-    - Add a mapping helper to translate ISO numbers to descriptive names (e.g., `31` -> `central_incisor`).
+### 1. AI Edge Function (Validation Logic)
+- **[MODIFY]** `supabase/functions/advanced-ai-analyze/index.ts`:
+    - Update `GEMINI_SYSTEM_PROMPT` to include a required `is_valid_radiograph` check.
+    - If `is_valid_radiograph` is false, the AI must return an error object instead of tooth classifications.
+    - Explicitly instruct the AI to reject non-dental images (e.g., landscapes, animals, general objects).
 
-### 2. UI Refinement
+### 2. Frontend Error Handling
 - **[MODIFY]** `screens/AnalysisView.tsx`:
-    - Reduce `glowOpacity` max value from `0.8` to `0.3`.
-    - Adjust `zIndex` or styling of `viewportGlow` to act as a border/ambient effect rather than an overlay.
-    - Ensure the `scanLine` remains sharp and visible.
+    - Update the analysis state to handle the `INVALID_IMAGE_TYPE` case.
+    - Show a high-contrast "Clinical Rejection" message in the status area.
+    - Disable the "Review Results" button if the image is rejected.
 
-### 3. Frontend Data Flow
+### 3. API Bridge
 - **[MODIFY]** `api/analyze.ts`:
-    - Ensure the mapping between `advanced-ai-analyze` and `calculate-age` is seamless.
+    - Ensure the rejection error is correctly propagated to the UI.
 
 ## Verification Plan
 
 ### Automated Tests
-- **Backend Simulation**: Use a scratch script to send mock ISO data to the `calculate-age` function and verify it calculates the maturity score correctly.
-- **Type Check**: `npx tsc --noEmit` to ensure mappings don't introduce `any` types.
+- **Backend Simulation**: Test the edge function with a "cat photo" (mock) and verify it returns the correct rejection JSON.
+- **Type Check**: `npx tsc --noEmit`.
 
 ### Manual Verification
-- **UI Visual Check**: Open the `AnalysisView` and verify the laser scan doesn't wash out the image.
-- **End-to-End Flow**: Verify that results from the AI are correctly passed into the `StageClassificationScreen`.
+1.  **Positive Test**: Upload a real OPG image. Verify analysis proceeds to the Lab.
+2.  **Negative Test**: Upload a completely unrelated image (e.g., a photo of a room).
+3.  **Verification**: Confirm the app shows "Analysis Failed: Invalid Clinical Image" and prevents proceeding to Stage Classification.

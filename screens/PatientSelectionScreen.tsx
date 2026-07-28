@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   TextInput,
@@ -10,13 +9,15 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography, radius } from '../theme';
 import { Typography } from '../components/common/Typography';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { BrandLogo } from '../components/common/BrandLogo';
-import { ChevronLeft, Search, UserPlus, User, Calendar, ArrowRight } from 'lucide-react-native';
+import { ChevronLeft, Search, UserPlus, User, Calendar, ArrowRight, Camera, Image as ImageIcon } from 'lucide-react-native';
 import { supabase } from '../services/supabase';
+import { openImagePicker, openCamera } from '../services/expo/imagePicker';
 import { Patient } from '../types';
 
 export default function PatientSelectionScreen({ navigation }: any) {
@@ -24,6 +25,8 @@ export default function PatientSelectionScreen({ navigation }: any) {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [showImageSource, setShowImageSource] = useState(false);
 
   // New Patient Form
   const [newName, setNewName] = useState('');
@@ -65,7 +68,6 @@ export default function PatientSelectionScreen({ navigation }: any) {
           name: newName,
           date_of_birth: newDob,
           clinical_notes: chronicAilments,
-          // Storing clinical history as JSON in clinical_history column (if exists, or notes)
           clinical_history: {
             medical_conditions: medicalConditions.split(',').map(s => s.trim()),
             chronic_ailments: chronicAilments
@@ -76,11 +78,26 @@ export default function PatientSelectionScreen({ navigation }: any) {
 
       if (error) throw error;
 
-      navigation.navigate('XRayAnalysis', { patient: data });
+      setSelectedPatient(data);
+      setShowImageSource(true);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePatientSelect = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setShowImageSource(true);
+  };
+
+  const handleImageChoice = async (type: 'camera' | 'gallery') => {
+    const uri = type === 'camera' ? await openCamera() : await openImagePicker();
+
+    if (uri) {
+      setShowImageSource(false);
+      navigation.navigate('XRayAnalysis', { patient: selectedPatient, imageUri: uri });
     }
   };
 
@@ -133,7 +150,7 @@ export default function PatientSelectionScreen({ navigation }: any) {
                   <Card key={p.id} variant="outline" style={styles.patientCard}>
                     <TouchableOpacity
                       style={styles.patientInner}
-                      onPress={() => navigation.navigate('XRayAnalysis', { patient: p })}
+                      onPress={() => handlePatientSelect(p)}
                     >
                       <View style={styles.patientAvatar}>
                         <User size={20} color={colors.slateMuted} />
@@ -220,6 +237,49 @@ export default function PatientSelectionScreen({ navigation }: any) {
                 style={{ marginTop: spacing.sm }}
               />
             </Card>
+          </View>
+        )}
+
+        {/* Image Source Selection Modal-like Overlay */}
+        {showImageSource && (
+          <View style={styles.overlay}>
+            <View style={styles.sourceCard}>
+              <Typography variant="h3" bold align="center" style={{ marginBottom: spacing.md }}>
+                Load Radiograph
+              </Typography>
+              <Typography variant="bodyMedium" color={colors.textSecondary} align="center" style={{ marginBottom: spacing.xl }}>
+                Select the source for {selectedPatient?.name}'s OPG
+              </Typography>
+
+              <View style={styles.sourceActions}>
+                <TouchableOpacity
+                  style={styles.sourceBtn}
+                  onPress={() => handleImageChoice('camera')}
+                >
+                  <View style={[styles.sourceIcon, { backgroundColor: colors.primaryExtraLight }]}>
+                    <Camera color={colors.primary} size={32} />
+                  </View>
+                  <Typography variant="label" bold>TAKE PHOTO</Typography>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.sourceBtn}
+                  onPress={() => handleImageChoice('gallery')}
+                >
+                  <View style={[styles.sourceIcon, { backgroundColor: '#E3F2FD' }]}>
+                    <ImageIcon color={colors.info} size={32} />
+                  </View>
+                  <Typography variant="label" bold>GALLERY</Typography>
+                </TouchableOpacity>
+              </View>
+
+              <Button
+                title="Cancel"
+                variant="outline"
+                onPress={() => setShowImageSource(false)}
+                style={{ marginTop: spacing.xl }}
+              />
+            </View>
           </View>
         )}
       </View>
@@ -326,5 +386,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.textPrimary,
     marginTop: spacing.xs,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    zIndex: 100,
+  },
+  sourceCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+  },
+  sourceActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: spacing.lg,
+  },
+  sourceBtn: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  sourceIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

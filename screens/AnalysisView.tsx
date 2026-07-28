@@ -3,21 +3,22 @@ import {
   View,
   StyleSheet,
   Image,
-  SafeAreaView,
   StatusBar,
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
   Switch,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, radius } from '../theme';
 import { Typography } from '../components/common/Typography';
 import { Button } from '../components/common/Button';
 import { BrandLogo } from '../components/common/BrandLogo';
-import { ChevronLeft, Info, CheckCircle2, AlertCircle, Zap } from 'lucide-react-native';
+import { ChevronLeft, Info, CheckCircle2, AlertCircle, Zap, Image as ImageIcon } from 'lucide-react-native';
 import { analyzeOPG } from '../api/analyze';
 import { useAuth } from '../provider/AuthProvider';
-import * as FileSystem from 'expo-file-system';
+import { openImagePicker } from '../services/expo/imagePicker';
+import { File } from 'expo-file-system';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -30,17 +31,29 @@ import Animated, {
 const { width, height } = Dimensions.get('window');
 
 export const AnalysisView = ({ route, navigation }: any) => {
-  const { imageUri, patient } = route.params || {};
+  const insets = useSafeAreaInsets();
+  const { imageUri: initialImageUri, patient } = route.params || {};
   const { session } = useAuth();
-  const [status, setStatus] = useState<'quality_check' | 'uploading' | 'analyzing' | 'completed' | 'failed'>('quality_check');
+  const [imageUri, setImageUri] = useState(initialImageUri);
+  const [status, setStatus] = useState<'quality_check' | 'uploading' | 'analyzing' | 'completed' | 'failed' | 'rejected'>('quality_check');
   const [qualityScore, setQualityScore] = useState<number>(0);
   const [method, setMethod] = useState<'OPG' | 'Panoramic' | 'Periapical'>('OPG');
   const [useEdgeAI, setUseEdgeAI] = useState(true);
   const [progress, setProgress] = useState(0);
   const [aiData, setAiData] = useState<any>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const scanLineY = useSharedValue(0);
   const glowOpacity = useSharedValue(0.2);
+
+  const handlePickImage = async () => {
+    const uri = await openImagePicker();
+    if (uri) {
+      setImageUri(uri);
+      setStatus('quality_check');
+      setProgress(0);
+    }
+  };
 
   useEffect(() => {
     // Laser Glow Animation
@@ -79,9 +92,8 @@ export const AnalysisView = ({ route, navigation }: any) => {
         }
 
         try {
-          const base64 = await FileSystem.readAsStringAsync(imageUri, {
-            encoding: 'base64',
-          });
+          const file = new File(imageUri);
+          const base64 = await file.base64();
 
           const progressInterval = setInterval(() => {
             setProgress((prev) => (prev < 0.9 ? prev + 0.05 : prev));
@@ -93,9 +105,17 @@ export const AnalysisView = ({ route, navigation }: any) => {
           setProgress(1);
           setAiData(result);
           setStatus('completed');
-        } catch (error) {
+        } catch (error: any) {
           console.error("Analysis failed:", error);
-          setStatus('failed');
+          const errorStr = error.message || "";
+
+          if (errorStr.includes('INVALID_IMAGE_TYPE')) {
+            setStatus('rejected');
+            setErrorMessage("Clinical Rejection: The uploaded image is not a recognized dental radiograph. Please upload a valid OPG or Periapical image.");
+          } else {
+            setStatus('failed');
+            setErrorMessage(errorStr || "An unexpected error occurred during clinical analysis.");
+          }
         }
       };
 
@@ -143,13 +163,20 @@ export const AnalysisView = ({ route, navigation }: any) => {
             </>
           ) : (
             <View style={styles.placeholder}>
-              <Typography color={colors.slateMuted}>No Image Loaded</Typography>
+              <ImageIcon color={colors.slateMuted} size={48} style={{ marginBottom: spacing.md }} />
+              <Typography color={colors.slateMuted} style={{ marginBottom: spacing.lg }}>No OPG Radiograph Loaded</Typography>
+              <Button
+                title="Select Image"
+                onPress={handlePickImage}
+                variant="outline"
+                size="sm"
+              />
             </View>
           )}
         </View>
 
         {/* Progress & Status Card */}
-        <View style={styles.bottomSheet}>
+        <View style={[styles.bottomSheet, { paddingBottom: Math.max(insets.bottom, spacing.xl) }]}>
           <View style={styles.methodSelector}>
             {['OPG', 'Panoramic', 'Periapical'].map((m: any) => (
               <TouchableOpacity
@@ -175,7 +202,7 @@ export const AnalysisView = ({ route, navigation }: any) => {
           <View style={styles.statusHeader}>
             {status === 'completed' ? (
               <CheckCircle2 color={colors.success} size={28} />
-            ) : status === 'failed' ? (
+            ) : status === 'failed' || status === 'rejected' ? (
               <AlertCircle color={colors.error} size={28} />
             ) : status === 'quality_check' ? (
               <ActivityIndicator color={colors.primaryLight} />
@@ -186,6 +213,7 @@ export const AnalysisView = ({ route, navigation }: any) => {
               {status === 'quality_check' ? 'Clinical Quality Check' :
                status === 'analyzing' ? 'Processing OPG...' :
                status === 'completed' ? 'Analysis Complete' :
+               status === 'rejected' ? 'Image Rejected' :
                status === 'failed' ? 'Analysis Failed' : 'Initializing...'}
             </Typography>
           </View>
@@ -197,6 +225,8 @@ export const AnalysisView = ({ route, navigation }: any) => {
               ? 'Our AI is detecting Demirjian stages for all 7 mandibular teeth. Please wait.'
               : status === 'completed'
               ? 'The analysis is ready for your clinical review and verification.'
+              : status === 'rejected'
+              ? errorMessage
               : status === 'failed'
               ? 'We encountered an error during analysis. Please try again with a clearer image.'
               : ''}
@@ -210,10 +240,12 @@ export const AnalysisView = ({ route, navigation }: any) => {
           <View style={styles.actions}>
             <Button
               title={status === 'completed' ? "Review Results" :
-                     status === 'failed' ? "Try Again" : "Cancel Analysis"}
+                     status === 'rejected' || status === 'failed' ? "Try Different Image" : "Cancel Analysis"}
               onPress={() => {
                 if (status === 'completed') {
                   navigation.navigate('StageClassification', { imageUri, aiData, patient });
+                } else if (status === 'rejected' || status === 'failed') {
+                  handlePickImage();
                 } else {
                   navigation.goBack();
                 }
@@ -291,7 +323,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xxl,
     borderTopRightRadius: radius.xxl,
     padding: spacing.xl,
-    paddingBottom: spacing.xxxl,
     gap: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',

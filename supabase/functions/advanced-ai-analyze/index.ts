@@ -6,11 +6,19 @@ const corsHeaders = {
 };
 
 const GEMINI_SYSTEM_PROMPT = `You are a dental radiology AI specialized in forensic and clinical age estimation.
-Analyze the provided radiograph (OPG, Panoramic, or Periapical) and determine the Demirjian development stages for mandibular teeth (ISO 31-37).
+
+FIRST STEP: RELEVANCE CHECK
+Identify if the provided image is a dental radiograph (OPG/Panoramic, Periapical, or Bitewing).
+- If the image is NOT a dental radiograph (e.g., a person, a room, an animal, a car, a general document, or a medical image of a different body part), you MUST return:
+  {"error": "INVALID_IMAGE_TYPE", "message": "The uploaded image is not a recognized dental radiograph."}
+
+SECOND STEP: ANALYSIS (Only if relevant)
+Analyze the radiograph and determine the Demirjian development stages for mandibular teeth (ISO 31-37).
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON object:
 {
+  "is_valid_radiograph": true,
   "estimated_age": <number>,
   "age_range": "min-max",
   "confidence": <0.0-1.0>,
@@ -122,6 +130,17 @@ serve(async (req: Request) => {
     } catch (parseError) {
       console.error("JSON PARSE ERROR. RAW MATCH:", jsonMatch[0]);
       throw new Error("Failed to parse JSON from AI response.");
+    }
+
+    // Check for AI-level rejection
+    if (parsedResult.error === "INVALID_IMAGE_TYPE") {
+      return new Response(JSON.stringify({
+        error: "INVALID_IMAGE_TYPE",
+        message: parsedResult.message || "This image is not a valid dental radiograph."
+      }), {
+        status: 422, // Unprocessable Entity
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Wrap in data.ai_result to match the expected format in api/analyze.ts
